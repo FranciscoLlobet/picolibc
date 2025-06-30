@@ -438,8 +438,8 @@ powl(long double x, long double y)
   z = one - (r - z);
   o.value = z;
   j = o.parts32.mswhi;
-  j += (n << 16);
-  if ((j >> 16) <= 0)
+  j += lsl(n, 16);
+  if (asr(j, 16) <= 0)
     z = scalbnl (z, n);	/* subnormal output */
   else
     {
@@ -449,8 +449,8 @@ powl(long double x, long double y)
   return s * z;
 }
 
-#if defined(_HAVE_ALIAS_ATTRIBUTE)
-#ifndef __clang__
+#ifdef __strong_reference
+#if defined(__GNUCLIKE_PRAGMA_DIAGNOSTIC) && !defined(__clang__)
 #pragma GCC diagnostic ignored "-Wmissing-attributes"
 #endif
 __strong_reference(powl, _powl);

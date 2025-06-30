@@ -30,7 +30,8 @@ POSSIBILITY OF SUCH DAMAGE.
 Author: Joel Schopp <jschopp@austin.ibm.com>
 */
 
-#include <_ansi.h>
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
@@ -46,7 +47,6 @@ typedef struct
   int fp;
 } c99_fread_t;
 
-#ifndef _REENT_ONLY
 
 size_t
 fread (void *__restrict  buf,
@@ -65,4 +65,3 @@ fread (void *__restrict  buf,
 
   return __send_to_ppe(SPE_C99_SIGNALCODE, SPE_C99_FREAD, &args);
 }
-#endif /* ! _REENT_ONLY */

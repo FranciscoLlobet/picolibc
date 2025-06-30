@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <picolibc.h>
+
 #include "arm_asm.h"
 
 #ifdef __thumb2__
@@ -44,12 +46,12 @@
 	.global strcpy
 	.type strcpy, %function
 strcpy:
-	.fnstart
+	fnstart
 	.cfi_sections .debug_frame
 	.cfi_startproc
 	prologue push_ip=HAVE_PAC_LEAF
 	
-#if !(defined(__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED) || \
+#if !(defined(__OPTIMIZE_SIZE__) || defined (__PREFER_SIZE_OVER_SPEED) || \
       (defined (__thumb__) && !defined (__thumb2__)))
 	
 #ifdef _ISA_ARM_7
@@ -178,8 +180,8 @@ strcpy:
 #endif
 	epilogue push_ip=HAVE_PAC_LEAF
 	.cfi_endproc
-	.cantunwind
-	.fnend
+	cantunwind
+	fnend
 	.size strcpy, . - strcpy
 
 #if defined(__linux__) && defined(__ELF__)

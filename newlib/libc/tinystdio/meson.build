@@ -33,10 +33,13 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 srcs_tinystdio = [
+  'asnprintf.c',
   'asprintf.c',
+  'atomic_load.c',
   'atold_engine.c',
   'bufio.c',
   'clearerr.c',
+  'compare_exchange.c',
   'dtox_engine.c',
   'ecvt.c',
   'ecvtf.c',
@@ -44,6 +47,7 @@ srcs_tinystdio = [
   'ecvtl.c',
   'ecvtl_r.c',
   'ecvt_r.c',
+  'exchange.c',
   'fclose.c',
   'fcvt.c',
   'fcvtf.c',
@@ -52,10 +56,12 @@ srcs_tinystdio = [
   'fcvtl_r.c',
   'fcvt_r.c',
   'fdevopen.c',
+  'fdopen.c',
   'feof.c',
   'ferror.c',
   'fflush.c',
   'fgetc.c',
+  'fgetpos.c',
   'fgets.c',
   'fgetwc.c',
   'fgetws.c',
@@ -64,19 +70,27 @@ srcs_tinystdio = [
   'filestrputalloc.c',
   'filestrput.c',
   'filewstrget.c',
+  'flockfile.c',
+  'flockfile_init.c',
   'fmemopen.c',
+  'fopen.c',
   'fprintf.c',
   'fputc.c',
   'fputs.c',
   'fputwc.c',
   'fputws.c',
   'fread.c',
+  'freopen.c',
   'fscanf.c',
   'fseek.c',
   'fseeko.c',
+  'fsetpos.c',
   'ftell.c',
   'ftello.c',
   'ftox_engine.c',
+  'ftrylockfile.c',
+  'funlockfile.c',
+  'funopen.c',
   'fwide.c',
   'fwprintf.c',
   'fwrite.c',
@@ -121,6 +135,7 @@ srcs_tinystdio = [
   'strtof.c',
   'strtof_l.c',
   'strtoimax.c',
+  'strtoimax_l.c',
   'strtol.c',
   'strtold.c',
   'strtold_l.c',
@@ -132,12 +147,14 @@ srcs_tinystdio = [
   'strtoull.c',
   'strtoull_l.c',
   'strtoumax.c',
+  'strtoumax_l.c',
   'swprintf.c',
   'swscanf.c',
   'tmpfile.c',
   'tmpnam.c',
   'ungetc.c',
   'ungetwc.c',
+  'vasnprintf.c',
   'vasprintf.c',
   'vffprintf.c',
   'vffscanf.c',
@@ -160,8 +177,29 @@ srcs_tinystdio = [
   'vswscanf.c',
   'vwprintf.c',
   'vwscanf.c',
+  'wcstod.c',
+  'wcstod_l.c',
+  'wcstof.c',
+  'wcstof_l.c',
+  'wcstoimax.c',
+  'wcstoimax_l.c',
+  'wcstol.c',
+  'wcstold.c',
+  'wcstold_l.c',
+  'wcstol_l.c',
+  'wcstoll.c',
+  'wcstoll_l.c',
+  'wcstoul.c',
+  'wcstoul_l.c',
+  'wcstoull.c',
+  'wcstoull_l.c',
+  'wcstoumax.c',
+  'wcstoumax_l.c',
   'wprintf.c',
   'wscanf.c',
+  'sprintf_s.c',
+  'vfprintf_s.c',
+  'vsnprintf_s.c',
 ]
 
 # exact float/string conversion code
@@ -192,27 +230,6 @@ else
   srcs_tinystdio += srcs_dtoa_float
 endif
 
-# atomic support for ungetc
-srcs_tinystdio_atomic = [
-  'compare_exchange.c',
-  'exchange.c',
-]
-
-if atomic_ungetc
-  srcs_tinystdio += srcs_tinystdio_atomic
-endif
-
-# code using POSIX APIs
-srcs_tinystdio_posix = [
-  'fdopen.c',
-  'fopen.c',
-  'freopen.c',
-]
-
-if posix_io
-  srcs_tinystdio += srcs_tinystdio_posix
-endif
-
 # stdin/stdout/stderr using POSIX APIs
 srcs_tinystdio_posix_console = [
   'posixiob_stdin.c',
@@ -224,9 +241,11 @@ if posix_console
   srcs_tinystdio += srcs_tinystdio_posix_console
 endif
 
-install_headers(['stdio.h', 'stdio-bufio.h'],
-		install_dir: include_dir
-	       )
+inc_headers = ['stdio.h', 'stdio-bufio.h']
+if really_install
+  install_headers(inc_headers,
+                  install_dir: include_dir)
+endif
 
 srcs_tinystdio_use = []
 foreach file : srcs_tinystdio
@@ -241,3 +260,13 @@ foreach file : srcs_tinystdio
 endforeach
 
 src_tinystdio = files(srcs_tinystdio_use)
+
+if enable_cdefs_tests
+  foreach header : inc_headers
+    test_name = 'check-cdef-' + header
+    test(test_name,
+         validate_cdefs,
+         args: [meson.current_source_dir() / header] + cc.cmd_array() + c_args + inc_args,
+         suite: 'headers')
+  endforeach
+endif

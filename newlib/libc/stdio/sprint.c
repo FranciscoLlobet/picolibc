@@ -1,6 +1,7 @@
-#include <newlib.h>
 
-#ifdef _FVWRITE_IN_STREAMIO
+#include <picolibc.h>
+
+#ifdef __FVWRITE_IN_STREAMIO
 
 #include <stdio.h>
 #include "fvwrite.h"

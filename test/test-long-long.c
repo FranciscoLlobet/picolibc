@@ -40,9 +40,10 @@
 #include <string.h>
 #include <assert.h>
 
-#if !defined(__PICOLIBC__) || defined(TINY_STDIO) || defined(_WANT_IO_LONG_LONG)
+#if !defined(__PICOLIBC__) || defined(__TINY_STDIO) || defined(__IO_LONG_LONG)
 
-unsigned long long
+#if 0
+static unsigned long long
 naive_atou(const char *buf)
 {
     unsigned long long v = 0;
@@ -59,7 +60,7 @@ naive_atou(const char *buf)
     return v * sign;
 }
 
-long long
+static long long
 naive_atol(const char *buf)
 {
     long long v = 0;
@@ -85,8 +86,9 @@ naive_atol(const char *buf)
     } while(c);
     return v * sign;
 }
+#endif
 
-char *
+static char *
 naive_utoa(char *buf, unsigned long long v)
 {
     buf += 21;
@@ -98,7 +100,7 @@ naive_utoa(char *buf, unsigned long long v)
     return buf;
 }
 
-char *
+static char *
 naive_ltoa(char *buf, long long v)
 {
     int sign = 0;
@@ -167,10 +169,17 @@ randval(void)
 #define RAND_LOOPS 1000ll
 #define SMALL_MIN -1024ll
 #define SMALL_MAX 1024ll
+#define SMALL_STEP 1
+#elif defined(__arc__)
+#define RAND_LOOPS 1000ll
+#define SMALL_MIN -65536
+#define SMALL_MAX 65536
+#define SMALL_STEP 7
 #else
 #define RAND_LOOPS 100000ll
 #define SMALL_MIN -65536
 #define SMALL_MAX 65536
+#define SMALL_STEP 1
 #endif
 
 int main(void)
@@ -179,7 +188,7 @@ int main(void)
     int         ret = 0;
     long long   t;
 
-    for (x = SMALL_MIN; x <= SMALL_MAX; x++)
+    for (x = SMALL_MIN; x <= SMALL_MAX; x += SMALL_STEP)
         ret |= check(x);
 
     for (t = 0; t < RAND_LOOPS; t++) {

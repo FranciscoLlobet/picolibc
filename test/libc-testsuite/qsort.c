@@ -33,8 +33,10 @@ static int scmp(const void *a, const void *b)
 
 static int icmp(const void *a, const void *b)
 {
-        long d = *(long*)a - *(long*)b;
-	return (d > 0) ? 1 : (d < 0) ? -1 : 0;
+        long av = *(long *)a;
+        long bv = *(long *)b;
+        int ret = (av > bv) ? 1 : (av < bv) ? -1 : 0;
+	return ret;
 }
 
 struct three {
@@ -87,7 +89,7 @@ static struct three t[] = {
     i3(848405), i3(3434), i3(3434344), i3(3535), i3(93994), i3(2230404), i3(4334)
 };
 
-int test_qsort(void)
+static int test_qsort(void)
 {
 	int i;
 	int err=0;

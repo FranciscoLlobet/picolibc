@@ -115,19 +115,17 @@ PORTABILITY
  * SUCH DAMAGE.
  */
 
-#define _DEFAULT_SOURCE
-#include <_ansi.h>
+#define _GNU_SOURCE
 #include <limits.h>
 #include <wctype.h>
 #include <wchar.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "../locale/setlocale.h"
+#include "local.h"
 
 /*
  * Convert a wide string to an unsigned long integer.
  */
-#ifndef _REENT_ONLY
 
 unsigned long
 wcstoul_l (const wchar_t *nptr, wchar_t **endptr,
@@ -139,6 +137,13 @@ wcstoul_l (const wchar_t *nptr, wchar_t **endptr,
 	register unsigned long cutoff;
 	register int neg = 0, any, cutlim;
 
+        /* Check for invalid base value */
+        if ((unsigned) base > 36 || base == 1) {
+                errno = EINVAL;
+                if (endptr)
+                        *endptr = (wchar_t *) nptr;
+                return 0;
+        }
 	/*
 	 * See strtol for comments as to the logic used.
 	 */
@@ -153,6 +158,7 @@ wcstoul_l (const wchar_t *nptr, wchar_t **endptr,
 	if ((base == 0 || base == 16) &&
 	    c == L'0' && (*s == L'x' || *s == L'X')) {
 		c = s[1];
+                nptr = s;
 		s += 2;
 		base = 16;
 	}
@@ -181,7 +187,7 @@ wcstoul_l (const wchar_t *nptr, wchar_t **endptr,
 	}
 	if (any < 0) {
 		acc = ULONG_MAX;
-		_REENT_ERRNO(rptr) = ERANGE;
+		errno = ERANGE;
 	} else if (neg)
 		acc = -acc;
 	if (endptr != 0)
@@ -196,5 +202,3 @@ wcstoul (const wchar_t *__restrict s,
 {
 	return wcstoul_l (s, ptr, base, __get_current_locale ());
 }
-
-#endif

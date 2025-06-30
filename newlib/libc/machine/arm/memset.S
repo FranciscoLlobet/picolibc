@@ -27,7 +27,9 @@
  */
 
 /* NOTE: This ifdef MUST match the one in memset.c.  */
-#if !defined (__SOFTFP__) && !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+#include <picolibc.h>
+
+#if __ARM_FP != 0 && !defined(__PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
 
 # if defined (__thumb2__)
 #  include "memset-thumb2.S"

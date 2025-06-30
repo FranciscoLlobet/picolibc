@@ -46,8 +46,11 @@
 static uint8_t *blocks[NUM_MALLOC];
 static size_t block_size[NUM_MALLOC];
 static uint8_t block_data[NUM_MALLOC];
-
 static int order[NUM_MALLOC];
+
+#ifdef __NANO_MALLOC
+struct mallinfo start_info;
+#endif
 
 static int
 randint(int max)
@@ -131,8 +134,14 @@ check_malloc(size_t in_use)
 {
 	int result = 0;
 
+        (void) in_use;
+#ifdef __NANO_MALLOC
 	struct mallinfo info = mallinfo();
-#ifdef _NANO_MALLOC
+
+        info.ordblks -= start_info.ordblks;
+        info.arena -= start_info.arena;
+        info.fordblks -= start_info.fordblks;
+        info.uordblks -= start_info.uordblks;
 	if (info.arena < info.fordblks + in_use) {
 		printf("non-free bytes in arena %zu free %zu\n", info.arena, info.fordblks);
 		result++;
@@ -153,16 +162,23 @@ check_malloc(size_t in_use)
 	return result;
 }
 
-#ifdef _NANO_MALLOC
+#ifdef __NANO_MALLOC
 extern size_t __malloc_minsize, __malloc_align, __malloc_head;
 #endif
 
-int
+#ifndef __disable_sanitizer
+#define __disable_sanitizer
+#endif
+
+int __disable_sanitizer
 main(void)
 {
 	int loops;
 	int result = 0;
 
+#ifdef __NANO_MALLOC
+        start_info = mallinfo();
+#endif
 	for (loops = 0; loops < 10; loops++)
 	{
 		long i;
@@ -196,8 +212,8 @@ main(void)
 
 		reset_blocks();
 
+#if (((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4) && !defined(__clang__))
 #pragma GCC diagnostic push
-#ifndef __clang__
 #pragma GCC diagnostic ignored "-Walloc-size-larger-than=PTRDIFF_MAX"
 #endif
 		/* Test huge malloc sizes */
@@ -217,7 +233,9 @@ main(void)
 		/* Test allocating negative amounts */
 		for (i = -1; i >= -128; i--) {
 			blocks[0] = malloc((size_t) i);
+#if (((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4) && !defined(__clang__))
 #pragma GCC diagnostic pop
+#endif
 			if (blocks[0]) {
 				printf("malloc size %ld succeeded\n", i);
 				result++;

@@ -34,14 +34,18 @@
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)hash_log2.c	8.2 (Berkeley) 5/31/94";
 #endif /* LIBC_SCCS and not lint */
-#include <sys/cdefs.h>
 
 #include <sys/types.h>
 
 #include "db_local.h"
+#include "hash.h"
+#include "page.h"
+#include "extern.h"
 
 __uint32_t
-__log2(__uint32_t num)
+__log2(
+	__uint32_t num
+)
 {
 	__uint32_t i, limit;
 

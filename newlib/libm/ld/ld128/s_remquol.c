@@ -23,14 +23,14 @@
 #ifdef LDBL_IMPLICIT_NBIT
 #define	LDBL_NBIT	0
 #define	SET_NBIT(hx)	((hx) | (1ULL << LDBL_MANH_SIZE))
-#define	HFRAC_BITS	(EXT_FRACHBITS + EXT_FRACHMBITS)
+#define	HFRAC_BITS	LDBL_MANH_SIZE
 #else
 #define	LDBL_NBIT	0x80000000
 #define	SET_NBIT(hx)	(hx)
-#define	HFRAC_BITS	(EXT_FRACHBITS + EXT_FRACHMBITS - 1)
+#define	HFRAC_BITS	(LDBL_MANH_SIZE - 1)
 #endif
 
-#define	MANL_SHIFT	(EXT_FRACLMBITS + EXT_FRACLBITS - 1)
+#define	MANL_SHIFT	(LDBL_MANL_SIZE - 1)
 
 static const long double Zero[] = {0.0L, -0.0L};
 
@@ -115,7 +115,7 @@ remquol(long double x, long double y, int *quo)
 	    hz=_hx-hy;lz=lx-ly; if(lx<ly) hz -= 1;
 	    if(hz<0){_hx = _hx+_hx+(lx>>MANL_SHIFT); lx = lx+lx;}
 	    else {_hx = hz+hz+(lz>>MANL_SHIFT); lx = lz+lz; q++;}
-	    q <<= 1;
+	    q = lsl(q, 1);
 	}
 	hz=_hx-hy;lz=lx-ly; if(lx<ly) hz -= 1;
 	if(hz>=0) {_hx=hz;lx=lz;q++;}

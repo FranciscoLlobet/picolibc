@@ -14,8 +14,10 @@
 #ifndef _RAND48_H_
 #define _RAND48_H_
 
+#define _DEFAULT_SOURCE
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 /*
  * rand48 family support
@@ -46,7 +48,7 @@ struct _rand48 {
   unsigned short _add;
 };
 
-extern NEWLIB_THREAD_LOCAL struct _rand48 _rand48;
+extern __THREAD_LOCAL struct _rand48 _rand48;
 
 extern void __dorand48 (struct _rand48 *r, unsigned short[3]);
 

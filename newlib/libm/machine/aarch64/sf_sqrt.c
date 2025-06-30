@@ -24,13 +24,14 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
+#if __ARM_FP & 0x4
 #include "fdlibm.h"
 
 float
 sqrtf (float x)
 {
   float result;
-#ifdef _WANT_MATH_ERRNO
+#ifdef __MATH_ERRNO
   if (isless(x, 0.0f))
       return __math_invalidf(x);
 #endif
@@ -38,3 +39,6 @@ sqrtf (float x)
   return result;
 }
 
+#else
+#include "../../math/sf_sqrt.c"
+#endif

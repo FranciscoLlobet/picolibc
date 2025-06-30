@@ -55,7 +55,7 @@ static const char NAME_TEMPLATE_EXT[] = "foo-XXXXXX.txt";
 
 #define MESSAGE "hello, world\n"
 
-void
+static void
 check_contents(char *template,int repeats)
 {
     FILE *f;
@@ -79,9 +79,11 @@ check_contents(char *template,int repeats)
 }
 
 /* Allow testing mktemp which is deprecated (for good reason) */
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4)
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-warning-option"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 int
 main(void)

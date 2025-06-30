@@ -143,7 +143,6 @@ static char *rcsid = "$Id$";
 
 /* Actual printf innards.
    This code is large and complicated...  */
-#include <newlib.h>
 
 #ifdef STRING_ONLY
 # define VFPRINTF svfprintf
@@ -152,7 +151,6 @@ static char *rcsid = "$Id$";
 #endif
 
 #define _DEFAULT_SOURCE
-#include <_ansi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -167,10 +165,17 @@ static char *rcsid = "$Id$";
 #include "vfieeefp.h"
 #include "nano-vfprintf_local.h"
 
+#ifdef __GNUCLIKE_PRAGMA_DIAGNOSTIC
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-warning-option"
+#pragma GCC diagnostic ignored "-Wanalyzer-use-of-uninitialized-value"
+#pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
+#endif
+
 /* The _ssputs function is shared between all versions of vfprintf
    and vfwprintf.  */
 #ifdef STRING_ONLY
-int
+static int
 _ssputs (
        FILE *fp,
        const char *buf,
@@ -200,7 +205,7 @@ _ssputs (
 	  str = (unsigned char *)malloc (newsize);
 	  if (!str)
 	    {
-	      _REENT_ERRNO(ptr) = ENOMEM;
+	      errno = ENOMEM;
 	      goto err;
 	    }
 	  memcpy (str, fp->_bf._base, curpos);
@@ -214,7 +219,7 @@ _ssputs (
 	      /* Free unneeded buffer.  */
 	      free (fp->_bf._base);
 	      /* Ensure correct errno, even if free changed it.  */
-	      _REENT_ERRNO(ptr) = ENOMEM;
+	      errno = ENOMEM;
 	      goto err;
 	    }
 	}
@@ -241,7 +246,7 @@ err:
    char output, but _ssprint cannot be discarded because it is used
    by a serial of functions like svfwprintf for wide char output.  */
 int
-_ssprint (
+__ssprint (
        FILE *fp,
        register struct __suio *uio)
 {
@@ -290,7 +295,7 @@ _ssprint (
 	      str = (unsigned char *)malloc (newsize);
 	      if (!str)
 		{
-		  _REENT_ERRNO(ptr) = ENOMEM;
+		  errno = ENOMEM;
 		  goto err;
 		}
 	      memcpy (str, fp->_bf._base, curpos);
@@ -305,7 +310,7 @@ _ssprint (
 		  /* Free unneeded buffer.  */
 		  free (fp->_bf._base);
 		  /* Ensure correct errno, even if free changed it.  */
-		  _REENT_ERRNO(ptr) = ENOMEM;
+		  errno = ENOMEM;
 		  goto err;
 		}
 	    }
@@ -344,7 +349,7 @@ err:
 /* Flush out all the vectors defined by the given uio,
    then reset it so that it can be reused.  */
 int
-_sprint (
+__sprint (
        FILE *fp,
        register struct __suio *uio)
 {
@@ -355,7 +360,7 @@ _sprint (
       uio->uio_iovcnt = 0;
       return 0;
     }
-#if defined _WIDE_ORIENT && (!defined _ELIX_LEVEL || _ELIX_LEVEL >= 4)
+#if defined __WIDE_ORIENT && (!defined __ELIX_LEVEL || __ELIX_LEVEL >= 4)
     if (fp->_flags2 & __SWID)
       {
 	struct __siov *iov;
@@ -388,7 +393,7 @@ out:
   return err;
 }
 
-_NOINLINE_STATIC int
+__noinline static int
 _sfputc (
        int c,
        FILE *fp)
@@ -399,7 +404,7 @@ _sfputc (
     return (_swbuf( c, fp));
 }
 
-int
+static int
 _sfputs (
        FILE *fp,
        const char *buf,
@@ -407,7 +412,7 @@ _sfputs (
 {
   register size_t i;
 
-#if defined _WIDE_ORIENT && (!defined _ELIX_LEVEL || _ELIX_LEVEL >= 4)
+#if defined __WIDE_ORIENT && (!defined __ELIX_LEVEL || __ELIX_LEVEL >= 4)
   if (fp->_flags2 & __SWID)
     {
       wchar_t *p;
@@ -466,7 +471,7 @@ VFPRINTF (
 
 #ifndef STRING_ONLY
   /* Initialize std streams if not dealing with sprintf family.  */
-  CHECK_INIT (data, fp);
+  CHECK_INIT();
   _newlib_flockfile_start (fp);
 
   /* Sorry, fprintf(read_only_file, "") returns EOF, not 0.  */
@@ -483,7 +488,7 @@ VFPRINTF (
       fp->_bf._base = fp->_p = malloc (64);
       if (!fp->_p)
 	{
-	  _REENT_ERRNO(data) = ENOMEM;
+	  errno = ENOMEM;
 	  return EOF;
 	}
       fp->_bf._size = 64;
@@ -520,7 +525,7 @@ VFPRINTF (
       prt_data.prec = -1;
       prt_data.dprec = 0;
       prt_data.l_buf[0] = '\0';
-#ifdef FLOATING_POINT
+#ifdef __IO_FLOATING_POINT
       prt_data.lead = 0;
 #endif
       /* The flags.  */
@@ -597,7 +602,7 @@ VFPRINTF (
       /* The conversion specifiers.  */
       prt_data.code = *fmt++;
       cp = memchr ("efgEFG", prt_data.code, 6);
-#ifdef FLOATING_POINT
+#ifdef __IO_FLOATING_POINT
       /* If cp is not NULL, we are facing FLOATING POINT NUMBER.  */
       if (cp)
 	{
@@ -606,12 +611,13 @@ VFPRINTF (
 	  if (_printf_float == NULL)
 	    {
 	      if (prt_data.flags & LONGDBL)
-		GET_ARG (N, ap_copy, _LONG_DOUBLE);
+		GET_ARG (N, ap_copy, long double);
 	      else
 		GET_ARG (N, ap_copy, double);
+	      n = 0;
 	    }
 	  else
-            n = _printf_float (data, &prt_data, fp, pfunc, &ap_copy);
+            n = _printf_float (&prt_data, fp, pfunc, &ap_copy);
 	}
       else
 #endif
@@ -633,11 +639,7 @@ error:
 }
 
 #ifdef STRING_ONLY
-int __nonnull((1))
-svfiprintf ( FILE *, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("svfprintf")));
+__nano_reference(svfprintf, svfiprintf);
 #else
-int __nonnull((1))
-vfiprintf ( FILE *, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("vfprintf")));
+__nano_reference(vfprintf, vfiprintf);
 #endif

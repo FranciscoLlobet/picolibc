@@ -10,6 +10,7 @@ Build status:
 
  * ![Linux](https://github.com/picolibc/picolibc/workflows/Linux/badge.svg?branch=main)
  * ![Zephyr](https://github.com/picolibc/picolibc/workflows/Zephyr/badge.svg?branch=main)
+ * ![Coreboot](https://github.com/picolibc/picolibc/workflows/Coreboot/badge.svg?branch=main)
  * ![Mac OS X](https://github.com/picolibc/picolibc/workflows/Mac%20OS%20X/badge.svg)
 
 ## License
@@ -41,22 +42,27 @@ is used to validate the code for all patch integration:
  * ARC (32- and 64- bit)
  * ARM (32- and 64- bit)
  * i386 (Native and Linux hosted, for testing)
+ * LatticeMico32
+ * LoongArch
  * Motorola 68000 (m68k)
  * MIPS
  * MSP430
  * Nios II
+ * OpenRisc
  * Power9
+ * Renesas RX
  * RISC-V (both 32- and 64- bit)
  * SparcV8 (32 bit)
+ * SuperH
  * x86_64 (Native and Linux hosted, for testing)
+ * Xtensa ESP32
 
 There is also build infrastructure and continuous build validation,
 but no integrated testing available for additional architectures:
 
  * Microblaze (32-bit, big and little endian)
- * PowerPC (big and little endian)
  * Sparc64
- * Xtensa (ESP8266, ESP32)
+ * Xtensa (ESP8266, LX106)
 
 Supporting architectures that already have Newlib code requires:
 
@@ -118,6 +124,64 @@ The bulk of newlib changes over the last several years have been in
 areas unrelated to the code used by picolibc, so keeping things in
 sync has not been difficult so far.
 
+Here's a list of some differences between picolibc and newlib:
+
+ 1. Designed for and tested on 32- and 64- bit embedded
+    systems. Newlib (and newlib-nano) are used on both embedded
+    systems and Cygwin, with the bulk of the development focused on
+    improving the Cygwin support. Because the Cygwin version needs to
+    be very careful about ABI stability, many parts of the newlib code
+    base are very difficult to change. Picolibc has no such
+    constraints, so much work has been done to improve the ABI and API
+    for use in embedded systems.
+
+ 2. Tinystdio. This new stdio implementation borrows some code from
+    AVR-Libc along with substantial new code. The goal of tinystdio is
+    to remain compatible with relevant C and POSIX standards while
+    using a very narrow API to the underlying system (it only requires
+    getc and putc) along with doing no internal allocation and using a
+    minimal amount of RAM (16 bytes on a 32 bit system for
+    stdin/stdout/stderr).
+
+ 3. Thread-local-storage support. Instead of creating a large data
+    structure containing all possible thread-specific data, Picolibc
+    uses the underlying TLS support from the compiler which only
+    allocates the amount of per-thread storage needed to support the
+    API called by the application. Typically, this means you use only
+    4 bytes for errno.
+
+ 4. Integrated test suite. The old newlib test code, which hasn't
+    worked for years, has been fixed up and is used to test changes to
+    the library. The test suite was used to correct numerous bugs in
+    the library; many of those changes have been passed on to newlib.
+
+ 5. Bare-metal startup code and linker scripts for many
+    architectures. These may not support precisely what your
+    application requires, but these provide a good basis for writing
+    your own startup code and linker scripts. These are used to create
+    bare-metal versions of the test suite which can then be run using
+    QEMU.
+
+ 6. Meson-based build system. This is largely used to avoid conflicts
+    with the newlib autotools build system files, but a side effect is
+    that the library builds very quickly.
+
+ 7. Narrow and well-defined POSIX OS requirements. Portions of
+    Picolibc which require underlying OS support are documented so
+    that you will know which functions are necessary based on the API
+    in use. In particular, tinystdio requires no POSIX functions to
+    support stdin/stdout/stderr, and instead requires only functions
+    to get and put single characters to the target device.
+
+ 8. Built-in semihosting support for many architectures. This allows
+    you to take advantage of existing gdb, openocd and qemu
+    semihosting support for things like debugging output even before
+    you have a serial port working.
+
+ 9. Clear BSD licensing. All non-BSD compatible library source code
+    has been removed so that the status of the resulting library is
+    not in question.
+
 ## Documentation
 
 Introductory documentation. Read these first:
@@ -144,6 +208,264 @@ use Picolibc:
  * [Copyright and license information](COPYING.picolibc)
 
 ## Releases
+
+### Picolibc release 1.8.10
+
+ * Add missing POSIX constants to limits.h.
+
+ * Add Renesas RX support. Thanks to Duy Dguyen.
+
+ * Update to Unicode 16.0. This matches glibc 2.41.
+
+ * Add TLS support and testing on loongarch, m68k, or1k, powerpc and
+   superh.
+
+ * Fix a couple of strncpy bugs in ARC assembly code.
+
+ * Clean up preprocessor symbols: remove unused symbols, rename
+   picolibc.h symbols to use a __ prefix and not include PICOLIBC or
+   NEWLIB in the names.
+
+ * Detect compiler attributes and builtins at compile time rather than
+   configure time where possible. Delete attributes and builtins not
+   used within the library implementation.
+
+ * Remove non-standard elf.h and mstats API.
+
+ * Clean up float predicates to make sure we provide implementations
+   of isinf, isnan and finite for all three types, both with and
+   without __ prefixes. Use symbol aliases to share the same function
+   implementation. Use the __ versions for the type generic macros
+   instead of fpclassify. Switch users of these within the math
+   library to use the type-generic versions.
+
+ * Start SuperH FPU in single mode when required.
+
+ * Test sh1 and sh2 targets using the binutils simulator.
+
+ * Initialize PowerPC IPLT table at startup.
+
+ * Switch printf/scanf aliases to prefer --printf=/--scanf= compiler
+   options
+
+ * Control UCS-2 and UCS-4 locales with mb-ucs-charsets configuration
+   option.
+
+ * Add stdio-locking option to provide full POSIX re-entrancy support
+   in tinystdio. Thanks to Alexey Lapshin.
+
+ * Add wcsto* string to number functions using tinystdio conversion
+   code. Avoids malloc call for float conversions.
+
+ * Add TLS API support for x86 targets. Thanks to TK Chia.
+
+ * Add -fsanitize=undefined handlers and make library build with that
+   enabled.
+
+### Picolibc release 1.8.9
+
+ * Use common clang/gcc feature detection macros on arm.
+
+ * Additional clang/compiler-rt work-arounds for arm which is less
+   consistent in handling exceptions.
+
+ * Use clang multilib support for aarch64
+
+ * Build fix on arc which would build two strchr versions in release
+   mode.
+
+ * Add picocrt and semihost support for xtensa. Test xtensa dc233c.
+
+ * Add C11's <uchar.h> header and implementation.
+
+ * Add nano-malloc-clear-freed option to erase memory released in free
+   or realloc.
+
+ * Add memset_explicit from C23.
+
+ * Work around broken clang builtin malloc which fails to set errno.
+
+ * Widen C++ _CTYPE_DATA array to fix mis-classification of \t; C++
+   requires bitmasks for all ctype operations, and 8 bits is not
+   enough. Thanks to M-Moawad.
+
+ * Update case conversion tables to Unicode 15.1.0
+
+ * Fix documentation formatting. Thanks to Eduard Tanase.
+
+ * Fix support for using long-long vfprintf version by default. Thanks
+   to Louis Peens.
+
+ * Remove arm unaligned memcpy asm code. This couldn't support targets
+   that only supported unaligned access. Use a new faster C version
+   for this case.
+
+ * Add asnprintf and vasnprintf as provided by newlib
+
+ * Support ARM's FVP emulator. Thanks to Oliver Stannard.
+
+ * Remove arc strlen asm code as it would access memory *before* the
+   provided buffer and fall afoul of the stack bounds checking
+   hardware.
+
+ * Support --printf={d,f,l,i,m} in place of
+   -DPICOLIBC_*_PRINTF_SCANF. This is the syntax proposed in the
+   patches submitted to gcc for picolibc support.
+
+ * Add LoongArch support, including testing. Thanks to Jiaxun Yang.
+
+ * Use new picolibc-ci-tools project which builds custom toolchain
+   bits automatically. Thanks to Jiaxun Yang.
+
+ * Add OpenRisc support, including testing. Thanks to Joel Holdsworth.
+
+ * Add Lattic3Mico32 support, including testing. Thanks to Jiaxun Yang.
+
+ * Add MIPS semihosting support. Thanks to Jiaxun Yang.
+
+ * Add older GCC compiler support, including versions < 4.4. Thanks to
+   Joel Holdsworth.
+
+ * Add coreboot configurations and tests. Thanks to Jeremy Bettis and
+   Jon Murphy.
+
+ * Fix numerous charset conversion errors for non-Unicode locales.
+
+ * Make sure malloc return is aligned by using max_align_t. Thanks to
+   Alex Richardson.
+
+ * Replace iconv and locale implementations with smaller code offering
+   the same locale functionality as before while the iconv code shares
+   the same charset support as the locale code instead of having a
+   completely separate implementation.
+
+### Picolibc release 1.8.8
+
+ * Fixed 3 bugs in the powf computation. Thanks to Fabian Schriever.
+
+ * Fixed a bunch of build issues found by Zephyr.
+
+ * Improve C++ testing and compatibility.
+
+### Picolibc release 1.8.7
+
+ * Support ARM v8.1-m BTI and PAC features
+
+ * Fix stdio buffered backend automatic flushing of stdout when
+   reading stdin.
+
+ * Support _FORTIFY_SOURCE=3
+
+ * Fix several fesetround implementations to return an error when
+   passed an invalid argument. Thanks to Abdallah Abdelhafeez.
+
+ * Document headers which the compiler must provide. Thanks to Alexey
+   Brodkin.
+
+ * Generate mktemp/tmpnam filenames using random() so they don't
+   repeat even if they aren't used before another name is generated.
+
+ * Set error flag when fgetc is called on an file without read
+   mode. Thanks to Mohamed Moawad.
+
+ * Add type casting to CMPLX, CMPLXF and CMPLXL macros (as glibc
+   does). Thanks to Mostafa Salman.
+
+ * Add mips64 support and build the library during CI.
+
+ * Make fgets return any accumulated string on EOF instead of
+   always returning NULL. Thanks to Hana Ashour.
+
+ * Use C99 minimum array size in asctime_r and ctime_r API
+   declarations ('[static 26]'). Bounds check the generated value and
+   return NULL/EOVERFLOW on overflow.
+
+ * Make Zephyr's -Oz cmake option enable
+   PREFER_SIZE_OVER_SPEED. Thanks to Jonathon Penix.
+
+ * Add funopen to tinystdio.
+
+ * Validate all public headers with a C++ compiler to make sure they
+   at least compile successfully. Fix time.h.
+
+ * Stop using -include picolibc.h during library build.
+
+ * Add -Wmissing-declarations and -Wmissing-prototypes to library
+   build flags. Fix a rather large pile of missing prototypes caused
+   by source files failing to add _GNU_SOURCE or _DEFAULT_SOURCE
+   definitions.
+
+ * Add POSIX "unlocked" I/O functions to tinystdio. These don't
+   actually do anything because tinystdio doesn't do any
+   locking. However, flockfile/funlockfile grab the global C library
+   lock so applications synchronizing with that API will "work".
+
+ * Fix wide orientation handling in tinystdio. Thanks to Ahmed Shehab.
+
+ * Add aarch64 soft float support for armv8. Clang allows this with
+   -march=armv8-a+nofp -mabi=aapcs-soft. This required building a
+   custom toolchain that included a compiler-rt library built with the
+   right options.
+
+ * Add fgetpos and fsetpos to tinystdio. Thanks to Hana Ashour.
+
+ * Restore missing members of 'struct sigevent'. Over eager removal of
+   _POSIX_THREADS support caused these to be accidentally deleted some
+   time ago.
+
+ * Test on i386 native target.
+
+ * Fix hex float scanning and printing. Thanks to Hana Ashour and
+   Ahmed Shehab.
+
+ * Fix double rounding in %f printf. Thanks to Ahmed Shehab for
+   constructing a test case that identified the issue.
+
+ * Add mem_align to the "big" malloc version. Thanks to Simon Tatham.
+
+ * Adjust POSIX and C headers to limit symbol exposure to that
+   specified in the standards.
+
+ * Fix rounding in float scanf. This does round twice for input longer
+   than the required number of digits, but that's permitted by the C
+   specification.
+
+ * Support %a/%A in scanf. Support arbitrary precision in %a/%A
+   printf. Fix NaN/INF formatting in %a/%A printf. Thanks to Ahmed
+   Shehab.
+
+ * Provide a build-time option to enable %n in printf. This is
+   disabled by default for security concerns, but supported in case
+   someone needs strict C conformance. Thanks to Ahmed Shehab.
+
+ * Make freopen clear the unget buffer. Thanks to Mostafa Salman.
+
+ * Fix wide and multi-byte character support in printf and scanf. For
+   strict standards conformance, there's now an option that enables
+   %lc/%ls in printf even if multi-byte support is not enabled.
+
+ * Enable MMU in picocrt on A profile ARM and AARCH64 targets when
+   present. This is required by the latest qemu which now more
+   accurately emulates this hardware. Thanks to Alex Richardson.
+
+ * Fix AARCH64 asm code in ILP32 mode.
+
+ * Parse NaN(<string>) in sscanf. This is required by the standard,
+   although picolibc doesn't do anything with <string>. Thanks to
+   Mohamed Moawad.
+
+ * Clean up header files. Picolibc tries to limit symbol definitions
+   to those specified in the C and POSIX specs.
+
+ * Add support for C's Annex K functions. These are bounds-checking
+   versions of various memory and string functions. Thanks to Mostafa
+   Salman.
+
+ * Perform locale string validation in newlocale even when _MB_CAPABLE
+   isn't defined. Thanks to Mostafa Salman.
+
+ * Place compiler-rt library after C library when linking
+   tests. Thanks to Oliver Stannard.
 
 ### Picolibc version 1.8.6
 

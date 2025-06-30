@@ -32,10 +32,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <picolibc.h>
+
 	.text
+	.globl _start
+	.code16
 __bios:	
 	.space	0xfff0
-	.code16
+_start:
 	ljmp	$0xffff,$0x0010
 	.space	0xb
 __bios_end:

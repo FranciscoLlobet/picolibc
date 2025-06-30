@@ -79,8 +79,7 @@ PORTABILITY
 <<fputws_unlocked>> is a GNU extension.
 */
 
-#define _DEFAULT_SOURCE
-#include <_ansi.h>
+#define _GNU_SOURCE
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -100,7 +99,7 @@ fputws (
 {
   size_t nbytes;
   char buf[BUFSIZ];
-#ifdef _FVWRITE_IN_STREAMIO
+#ifdef __FVWRITE_IN_STREAMIO
   struct __suio uio;
   struct __siov iov;
 

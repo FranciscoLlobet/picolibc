@@ -9,8 +9,8 @@ duplicated in all such forms.
 This file is distributed WITHOUT ANY WARRANTY; without even the implied
 warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
+#include <sys/features.h>
 #ifndef __IEEE_BIG_ENDIAN
-#include <picolibc.h>
 #ifndef __IEEE_LITTLE_ENDIAN
 
 /* This file can define macros to choose variations of the IEEE float
@@ -89,22 +89,6 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # endif
 #endif
 
-#if __SIZEOF_DOUBLE__ == __SIZEOF_FLOAT__
-# define _DBL_EQ_FLT
-#endif
-
-#if __SIZEOF_LONG_DOUBLE == __SIZEOF_DOUBLE__
-# define LDBL_EQ_DBL
-#endif
-
-#if __SIZEOF_DOUBLE__ == 4
-# define _DOUBLE_IS_32BITS
-#endif
-
-#if _SIZEOF_LONG_DOUBLE__ == 4
-# define _LONG_DOUBLE_IS_32BITS
-#endif
-
 #if (defined(__arm__) || defined(__thumb__)) && !defined(__MAVERICK__)
 /* arm with hard fp and soft dp cannot use new float code */
 # if (__ARM_FP & 4) && !(__ARM_FP & 8)
@@ -114,7 +98,7 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
    byte ordering was big or little endian depending upon the target.
    Modern floating-point formats are naturally ordered; in this case
    __VFP_FP__ will be defined, even if soft-float.  */
-#if defined(__VFP_FP__) || defined(__SOFTFP__)
+#if defined(__VFP_FP__) || __ARM_FP == 0
 # ifdef __ARMEL__
 #  define __IEEE_LITTLE_ENDIAN
 # else
@@ -126,7 +110,7 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #  define __IEEE_BYTES_LITTLE_ENDIAN
 # endif
 #endif
-#ifndef __SOFTFP__
+#if __ARM_FP != 0
 # define _SUPPORTS_ERREXCEPT
 #endif
 /* As per ISO/IEC TS 18661 '__FLT_EVAL_METHOD__' will be defined to 16
@@ -144,8 +128,15 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #else
 #define __IEEE_BIG_ENDIAN
 #endif
-#ifdef __ARM_FP
+#if __ARM_FP != 0
 # define _SUPPORTS_ERREXCEPT
+#else
+#ifdef __clang__
+#include <float.h>
+/* Clang accesses FPSR for FLT_ROUNDS with soft float target */
+#undef FLT_ROUNDS
+#define FLT_ROUNDS 1
+#endif
 #endif
 /* As per ISO/IEC TS 18661 '__FLT_EVAL_METHOD__' will be defined to 16
    (if compiling with +fp16 support) so it can't be used by math.h to
@@ -256,6 +247,17 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 #endif
 
+#ifdef __loongarch__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define __IEEE_BIG_ENDIAN
+#else
+#define __IEEE_LITTLE_ENDIAN
+#endif
+#ifndef __loongarch_soft_float
+# define _SUPPORTS_ERREXCEPT
+#endif
+#endif
+
 #ifdef __riscv
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #define __IEEE_BIG_ENDIAN
@@ -315,7 +317,9 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #endif
 
 #ifdef __mips__
+#ifndef __mips_nan2008
 #define _IEEE_754_2008_SNAN 0
+#endif
 #ifndef __mips_soft_float
 #define _SUPPORTS_ERREXCEPT
 #endif
@@ -395,6 +399,10 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #else
 #define __IEEE_LITTLE_ENDIAN
 #endif
+#endif
+
+#ifdef __ARC64__
+#define __IEEE_LITTLE_ENDIAN
 #endif
 
 #ifdef __CRX__
@@ -575,6 +583,37 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #define __IEEE_LITTLE_ENDIAN
 #endif
 
+#ifdef __TRICORE__
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define __IEEE_BIG_ENDIAN
+#else
+#define __IEEE_LITTLE_ENDIAN
+#endif
+#endif
+
+/* Figure out if long double is the same size as double. If the system
+ * doesn't provide long double, then those values will be undefined
+ * and cpp will substitute 0 for them in the test
+ */
+
+#if __LDBL_MANT_DIG__ == __DBL_MANT_DIG__ && __LDBL_MIN_EXP__ == __DBL_MIN_EXP__ &&     \
+    __LDBL_MAX_EXP__ == __DBL_MAX_EXP__
+#define _LDBL_EQ_DBL
+#endif
+
+#if __SIZEOF_DOUBLE__ == 4
+# define _DOUBLE_IS_32BITS
+#endif
+
+/*
+ * long double is supported for binary128 and 80-bit extended
+ * precision for x86 and m68k. Targets with binary64 long double
+ * are supported by al
+ */
+#if defined (_LDBL_EQ_DBL) || defined (__CYGWIN__) || (defined(__HAVE_LONG_DOUBLE) && __SIZEOF_LONG_DOUBLE__ <= 8) || (__LDBL_MANT_DIG__ == 64 || __LDBL_MANT_DIG__ == 113)
+#define __HAVE_LONG_DOUBLE_MATH
+#endif
+
 /* New math code requires 64-bit doubles */
 #ifdef _DOUBLE_IS_32BITS
 #undef __OBSOLETE_MATH
@@ -589,9 +628,6 @@ warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 #define __IEEE_BIG_ENDIAN
 #endif
 
-#ifdef __CYGWIN__
-#define __OBSOLETE_MATH_DEFAULT 0
-#endif
 
 #ifndef __OBSOLETE_MATH_DEFAULT
 #define __OBSOLETE_MATH_DEFAULT 1

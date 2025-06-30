@@ -31,8 +31,11 @@
 
 #include "stdio_private.h"
 
+#undef putc
+#undef putc_unlocked
+
 int
-fputc(int c, FILE *stream)
+__STDIO_UNLOCKED(putc)(int c, FILE *stream)
 {
 	if ((stream->flags & __SWR) == 0)
 		return EOF;
@@ -45,8 +48,26 @@ fputc(int c, FILE *stream)
 	return (unsigned char) c;
 }
 
-#ifdef _HAVE_ALIAS_ATTRIBUTE
-__strong_reference(fputc, putc);
-#elif !defined(getc)
-int putc(int c, FILE *stream) { return fputc(c, stream); }
+#ifdef __STDIO_LOCKING
+int
+putc(int c, FILE *stream)
+{
+    int ret;
+    __flockfile(stream);
+    ret = putc_unlocked(c, stream);
+    __funlockfile(stream);
+    return ret;
+}
+#else
+#ifdef __strong_reference
+__strong_reference(putc, putc_unlocked);
+#else
+int putc_unlocked(int c, FILE *stream) { return putc(c, stream); }
+#endif
+#endif
+
+#ifdef __strong_reference
+__strong_reference(putc, fputc);
+#else
+int fputc(int c, FILE *stream) { return putc(c, stream); }
 #endif

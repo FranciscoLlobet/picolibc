@@ -41,17 +41,11 @@
 
 static char write_buf[__PICOLIBC_STDERR_BUFSIZ];
 
-static struct __file_bufio __stderr = FDEV_SETUP_POSIX(1, write_buf, __PICOLIBC_STDERR_BUFSIZ, __SWR, __BLBF);
+static struct __file_bufio __stderr = FDEV_SETUP_POSIX(2, write_buf, __PICOLIBC_STDERR_BUFSIZ, __SWR, __BLBF);
 
 FILE *const __posix_stderr = &__stderr.xfile.cfile.file;
 
 __weak_reference(__posix_stderr,stderr);
-
-__attribute__((constructor))
-static void posix_init(void)
-{
-    __bufio_lock_init(&__stderr.xfile.cfile.file);
-}
 
 #if __PICOLIBC_STDERR_BUFSIZE > 1
 /*

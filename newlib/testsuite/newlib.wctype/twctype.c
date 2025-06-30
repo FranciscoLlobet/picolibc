@@ -8,14 +8,13 @@ is freely granted, provided that this notice is preserved.
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include <newlib.h>
 #include <locale.h>
 #include "check.h"
 
 int main()
 {
-#if !defined(_ELIX_LEVEL) || _ELIX_LEVEL > 1
-  if (_MB_LEN_MAX == 1)
+#if !defined(__ELIX_LEVEL) || __ELIX_LEVEL > 1
+  if (__MB_LEN_MAX == 1)
     {
       CHECK (iswalpha(L'a'));
       CHECK (!iswalpha(L'3'));

@@ -116,19 +116,16 @@ No supporting OS subroutines are required.
  */
 
 
-#define _DEFAULT_SOURCE
-#include <_ansi.h>
+#define _GNU_SOURCE
 #include <limits.h>
 #include <wctype.h>
 #include <errno.h>
 #include <wchar.h>
-#include "../locale/setlocale.h"
+#include "local.h"
 
 /*
  * Convert a wide string to a long integer.
  */
-#ifndef _REENT_ONLY
-
 long
 wcstol_l (const wchar_t *nptr, wchar_t **endptr,
 	   int base, locale_t loc)
@@ -139,6 +136,13 @@ wcstol_l (const wchar_t *nptr, wchar_t **endptr,
 	register unsigned long cutoff;
 	register int neg = 0, any, cutlim;
 
+        /* Check for invalid base value */
+        if ((unsigned) base > 36 || base == 1) {
+                errno = EINVAL;
+                if (endptr)
+                        *endptr = (wchar_t *) nptr;
+                return 0;
+        }
 	/*
 	 * Skip white space and pick up leading +/- sign if any.
 	 * If base is 0, allow 0x for hex and 0 for octal, else
@@ -155,6 +159,7 @@ wcstol_l (const wchar_t *nptr, wchar_t **endptr,
 	if ((base == 0 || base == 16) &&
 	    c == L'0' && (*s == L'x' || *s == L'X')) {
 		c = s[1];
+                nptr = s;
 		s += 2;
 		base = 16;
 	}
@@ -202,7 +207,7 @@ wcstol_l (const wchar_t *nptr, wchar_t **endptr,
 	}
 	if (any < 0) {
 		acc = neg ? LONG_MIN : LONG_MAX;
-		_REENT_ERRNO(rptr) = ERANGE;
+		errno = ERANGE;
 	} else if (neg)
 		acc = -acc;
 	if (endptr != 0)
@@ -218,5 +223,3 @@ wcstol (const wchar_t *__restrict s,
 {
 	return wcstol_l (s, ptr, base, __get_current_locale ());
 }
-
-#endif

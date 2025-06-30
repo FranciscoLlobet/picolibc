@@ -47,8 +47,8 @@ lg2_h  =  6.93145752e-01, /* 0x3f317200 */
 lg2_l  =  1.42860654e-06, /* 0x35bfbe8c */
 ovt =  4.2995665694e-08, /* -(128-log2(ovfl+.5ulp)) */
 cp    =  9.6179670095e-01, /* 0x3f76384f =2/(3ln2) */
-cp_h  =  9.6179199219e-01, /* 0x3f763800 =head of cp */
-cp_l  =  4.7017383622e-06, /* 0x369dc3a0 =tail of cp_h */
+cp_h  =  9.61914062e-01,   /* 0x3f764000 =head of cp */
+cp_l  = -1.17368574e-04,   /* 0xb8f623c6 =tail of cp */
 ivln2    =  1.4426950216e+00, /* 0x3fb8aa3b =1/ln2 */
 ivln2_h  =  1.4426879883e+00, /* 0x3fb8aa00 =16b 1/ln2*/
 ivln2_l  =  7.0526075433e-06; /* 0x36eca570 =1/ln2 tail*/
@@ -93,7 +93,7 @@ powf(float x, float y)
         else if (iy >= 0x3f800000) {
             k = (iy >> 23) - 0x7f; /* exponent */
             j = iy >> (23 - k);
-            if ((j << (23 - k)) == iy)
+            if (lsl(j, (23 - k)) == iy)
                 yisint = 2 - (j & 1);
         }
     }
@@ -199,7 +199,8 @@ powf(float x, float y)
         GET_FLOAT_WORD(is, s_h);
         SET_FLOAT_WORD(s_h, is & 0xfffff000);
         /* t_h=ax+bp[k] High */
-        SET_FLOAT_WORD(t_h, ((ix >> 1) | 0x20000000) + 0x0040000 + (k << 21));
+        is = ((ix >> 1) & 0xfffff000U) | 0x20000000;
+        SET_FLOAT_WORD(t_h, is + 0x00400000 + lsl(k, 21));
         t_l = ax - (t_h - bp[k]);
         s_l = v * ((u - s_h * t_h) - s_h * t_l);
         /* compute log(ax) */
@@ -281,16 +282,16 @@ powf(float x, float y)
     r = (z * t1) / (t1 - two) - (w + z * w);
     z = one - (r - z);
     GET_FLOAT_WORD(j, z);
-    j += (n << 23);
-    if ((j >> 23) <= 0)
+    j += lsl(n, 23);
+    if (asr(j, 23) <= 0)
         z = scalbnf(z, (int)n); /* subnormal output */
     else
         SET_FLOAT_WORD(z, j);
     return s * z;
 }
 
-#if defined(_HAVE_ALIAS_ATTRIBUTE)
-#ifndef __clang__
+#ifdef __strong_reference
+#if defined(__GNUCLIKE_PRAGMA_DIAGNOSTIC) && !defined(__clang__)
 #pragma GCC diagnostic ignored "-Wmissing-attributes"
 #endif
 __strong_reference(powf, _powf);

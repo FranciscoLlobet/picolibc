@@ -23,21 +23,23 @@
  *    As described by items in quotes
  */
 
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4)
 #pragma GCC diagnostic ignored "-Wmemset-transposed-args"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wstringop-overflow="
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
 #endif
 #pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
 
 
-const char *it = "<UNSET>";	/* Routine name for message routines. */
-int  errors = 0;
+static const char *it = "<UNSET>";	/* Routine name for message routines. */
+static int  errors = 0;
 
 /* Complain if condition is not true.  */
 #define check(thing) checkit(thing, __LINE__)
 
-void
+static void
 checkit (int ok,
        int l )
 
@@ -57,7 +59,7 @@ checkit (int ok,
 /* Complain if first two args don't strcmp as equal.  */
 #define equal(a, b)  funcqual(a,b,__LINE__);
 
-void
+static void
 funcqual (char *a,
        char *b,
        int l)

@@ -43,6 +43,10 @@
    if defined (__ARM_ARCH_7A__) && defined (__ARM_FEATURE_UNALIGNED)
 
  */
+#include <picolibc.h>
+
+#include "arm_asm.h"
+
 	.syntax unified
 	/* This implementation requires ARM state.  */
 	.arm
@@ -55,7 +59,7 @@
 # define USE_VFP
 # define USE_NEON
 
-#elif !defined (__SOFTFP__)
+#elif __ARM_FP != 0
 
 	.arch	armv6
 	.fpu	vfpv2
@@ -153,6 +157,9 @@
 	.endm
 
 def_fn memcpy p2align=6
+	ASM_ALIAS __aeabi_memcpy, memcpy
+	ASM_ALIAS __aeabi_memcpy4, memcpy
+	ASM_ALIAS __aeabi_memcpy8, memcpy
 
 	mov	dst, dstin	/* Preserve dstin, we need to return it.  */
 	cmp	count, #64

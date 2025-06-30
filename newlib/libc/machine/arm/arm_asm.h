@@ -151,6 +151,28 @@
 *
 ******************************************************************************/
 
+
+/* Don't emit unwind or exception table entries */
+
+        .macro fnstart
+#ifdef __INCLUDE_EXIDX
+        .fnstart
+#endif
+        .endm
+
+        .macro cantunwind
+#ifdef __INCLUDE_EXIDX
+        .cantunwind
+#endif
+        .endm
+
+        .macro fnend
+#ifdef __INCLUDE_EXIDX
+        .fnend
+#endif
+        .endm
+
+
 /* Emit .cfi_restore directives for a consecutive sequence of registers.  */
 	.macro cfirestorelist first, last
 	.cfi_restore \last
@@ -497,6 +519,16 @@
 	.else
 	 _epilogue first=\first, last=\last, push_ip=\push_ip, push_lr=\push_lr
 	.endif
+.endm
+
+.macro	ASM_ALIAS new old
+	.global	\new
+	.type	\new, %function
+#if defined (__thumb__)
+	.thumb_set	\new, \old
+#else
+	.set	\new, \old
+#endif
 .endm
 
 #endif /* __ASSEMBLER__ */

@@ -35,10 +35,13 @@
 inc_machine_headers_machine = [
   'acle-compat.h',
   '_endian.h',
+  'fenv.h',
   'fenv-fp.h',
   'math.h',
   'param.h',
 ]
 
-install_headers(inc_machine_headers_machine,
-		install_dir: include_dir / 'machine')
+if really_install
+  install_headers(inc_machine_headers_machine,
+                  install_dir: include_dir / 'machine')
+endif

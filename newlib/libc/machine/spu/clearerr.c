@@ -30,11 +30,12 @@ POSSIBILITY OF SUCH DAMAGE.
 Author: Joel Schopp <jschopp@austin.ibm.com>
 */
 
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
 
-#ifndef _REENT_ONLY
 
 void
 clearerr (FILE * fp)
@@ -50,4 +51,3 @@ clearerr (FILE * fp)
 
   return;
 }
-#endif /* ! _REENT_ONLY */

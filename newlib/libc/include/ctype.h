@@ -34,31 +34,26 @@ SUCH DAMAGE.
 #ifndef _CTYPE_H_
 #define _CTYPE_H_
 
-#include <_ansi.h>
 #include <sys/cdefs.h>
-#include <limits.h>
 
-#if __POSIX_VISIBLE >= 200809 || __MISC_VISIBLE || defined (_LIBC)
+#if __POSIX_VISIBLE >= 200809 || __MISC_VISIBLE
 #include <sys/_locale.h>
 #endif
 
 _BEGIN_STD_C
 
 /*
- * The small ctype code does not support locales or extended character sets. It also breaks
+ * The small ctype code does not support extended character sets. It also breaks
  * libstdc++'s ctype implementation, so just skip it for c++
  */
-#if defined(__HAVE_LOCALE_INFO__) || \
-    defined (_MB_EXTENDED_CHARSETS_ISO) || \
-    defined (_MB_EXTENDED_CHARSETS_WINDOWS) || \
-    defined (__cplusplus)
+#if defined(__MB_EXTENDED_CHARSETS_NON_UNICODE) || defined (__cplusplus)
 #undef _PICOLIBC_CTYPE_SMALL
 #define _PICOLIBC_CTYPE_SMALL 0
 #endif
 
 /*
  * The default ctype style depends upon whether we are optimizing for
- * size and whether the library supports locale-specific ctype data
+ * size and whether the library supports charset-specific ctype data
  */
 #if !defined(_PICOLIBC_CTYPE_SMALL)
 #ifdef __OPTIMIZE_SIZE__
@@ -84,11 +79,6 @@ int toupper (int c);
 
 #if __ISO_C_VISIBLE >= 1999
 int isblank (int c);
-#ifdef __declare_extern_inline
-__declare_extern_inline(int) isblank(int c) {
-	return c == ' ' || c == '\t';
-}
-#endif
 #endif
 
 #if __MISC_VISIBLE || __XSI_VISIBLE
@@ -120,13 +110,18 @@ int toupper_l (int c, locale_t l);
 #if __MISC_VISIBLE
 int isascii_l (int c, locale_t l);
 int toascii_l (int c, locale_t l);
-#define isascii_l(__c,__l)	((__l),(unsigned)(__c)<=0177)
-#define toascii_l(__c,__l)	((__l),(__c)&0177)
+#define isascii_l(__c,__l)	((void) (__l),(unsigned)(__c)<=0177)
+#define toascii_l(__c,__l)	((void) (__l),(__c)&0177)
 #endif
 
 #if _PICOLIBC_CTYPE_SMALL
 
 #ifdef __declare_extern_inline
+
+__declare_extern_inline(int) isblank (int c)
+{
+    return c == ' ' || c == '\t';
+}
 
 __declare_extern_inline(int) iscntrl (int c)
 {
@@ -219,111 +214,98 @@ __declare_extern_inline(int) tolower_l (int c, locale_t l) { (void) l; return to
 __declare_extern_inline(int) toupper_l (int c, locale_t l) { (void) l; return toupper(c); }
 #endif
 
+#endif /* __declare_extern_inline */
+
+#else  /* _PICOLIBC_CTYPE_SMALL */
+
+#define _CTYPE_OFFSET   127
+
+extern const char       _ctype_b[];
+extern const short      _ctype_wide[];
+
+#define _ctype_ (_ctype_b + _CTYPE_OFFSET)
+
+#define	__CTYPE_UPPER	0x001    /* upper */
+#define	__CTYPE_LOWER	0x002    /* lower */
+#define	__CTYPE_DIGIT	0x004    /* digit */
+#define	__CTYPE_SPACE	0x008    /* space */
+#define __CTYPE_PUNCT	0x010    /* punct */
+#define __CTYPE_CNTRL	0x020    /* control */
+#define __CTYPE_HEX	0x040    /* hex */
+#define	__CTYPE_BLANK	0x080    /* blank (but not tab) */
+#define __CTYPE_TAB     0x100    /* tab (only in wide table) */
+
+#ifdef __cplusplus
+/* We need these legacy symbols to build libstdc++ */
+#define _U __CTYPE_UPPER
+#define _L __CTYPE_LOWER
+#define _N __CTYPE_DIGIT
+#define _S __CTYPE_SPACE
+#define _P __CTYPE_PUNCT
+#define _C __CTYPE_CNTRL
+#define _X __CTYPE_HEX
+#define _B __CTYPE_BLANK
 #endif
 
-#else
-
-#define	_U	01
-#define	_L	02
-#define	_N	04
-#define	_S	010
-#define _P	020
-#define _C	040
-#define _X	0100
-#define	_B	0200
-
-#if CHAR_MIN == SCHAR_MIN
-#define ALLOW_NEGATIVE_CTYPE_INDEX
-#endif
-
-#if defined(ALLOW_NEGATIVE_CTYPE_INDEX)
-extern	__IMPORT const char	_ctype_b[];
-#define _ctype_ (_ctype_b + 127)
-#else
-extern	__IMPORT const char	_ctype_[];
-#endif
-
-#ifdef __HAVE_LOCALE_INFO__
+#ifdef __MB_EXTENDED_CHARSETS_NON_UNICODE
 const char *__locale_ctype_ptr (void);
+#define __CTYPE_PTR     __locale_ctype_ptr()
 #else
-#define __locale_ctype_ptr()	_ctype_
+#define __CTYPE_PTR	_ctype_
 #endif
-
-# define __CTYPE_PTR	(__locale_ctype_ptr ())
 
 #ifndef __cplusplus
-static __inline char __ctype_lookup(int c) { return (__CTYPE_PTR + 1)[c]; }
 
-#define	isalpha(__c)	(__ctype_lookup(__c)&(_U|_L))
-#define	isupper(__c)	((__ctype_lookup(__c)&(_U|_L))==_U)
-#define	islower(__c)	((__ctype_lookup(__c)&(_U|_L))==_L)
-#define	isdigit(__c)	(__ctype_lookup(__c)&_N)
-#define	isxdigit(__c)	(__ctype_lookup(__c)&(_X|_N))
-#define	isspace(__c)	(__ctype_lookup(__c)&_S)
-#define ispunct(__c)	(__ctype_lookup(__c)&_P)
-#define isalnum(__c)	(__ctype_lookup(__c)&(_U|_L|_N))
-#define isprint(__c)	(__ctype_lookup(__c)&(_P|_U|_L|_N|_B))
-#define	isgraph(__c)	(__ctype_lookup(__c)&(_P|_U|_L|_N))
-#define iscntrl(__c)	(__ctype_lookup(__c)&_C)
+#define __ctype_lookup(__c) (__CTYPE_PTR + 1)[(int) (__c)]
 
-#if __POSIX_VISIBLE >= 200809
-#ifdef __HAVE_LOCALE_INFO__
-const char *__locale_ctype_ptr_l (locale_t);
-#else
-static __inline const char *
-__locale_ctype_ptr_l(locale_t _l)
-{
-	(void)_l;
-	return __locale_ctype_ptr();
+#define	isalpha(__c)	(__ctype_lookup(__c)&(__CTYPE_UPPER|__CTYPE_LOWER))
+#define	isupper(__c)	((__ctype_lookup(__c)&(__CTYPE_UPPER|__CTYPE_LOWER))==__CTYPE_UPPER)
+#define	islower(__c)	((__ctype_lookup(__c)&(__CTYPE_UPPER|__CTYPE_LOWER))==__CTYPE_LOWER)
+#define	isdigit(__c)	(__ctype_lookup(__c)&__CTYPE_DIGIT)
+#define	isxdigit(__c)	(__ctype_lookup(__c)&(__CTYPE_HEX|__CTYPE_DIGIT))
+#define	isspace(__c)	(__ctype_lookup(__c)&__CTYPE_SPACE)
+#define ispunct(__c)	(__ctype_lookup(__c)&__CTYPE_PUNCT)
+#define isalnum(__c)	(__ctype_lookup(__c)&(__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT))
+#define isprint(__c)	(__ctype_lookup(__c)&(__CTYPE_PUNCT|__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT|__CTYPE_BLANK))
+#define	isgraph(__c)	(__ctype_lookup(__c)&(__CTYPE_PUNCT|__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT))
+#define iscntrl(__c)	(__ctype_lookup(__c)&__CTYPE_CNTRL)
+
+#if __ISO_C_VISIBLE >= 1999 && defined(__declare_extern_inline)
+__declare_extern_inline(int) isblank(int c) {
+    return c == '\t' || __ctype_lookup(c) & __CTYPE_BLANK;
 }
 #endif
 
-static __inline char __ctype_lookup_l(int c, locale_t l) {
-	return (__locale_ctype_ptr_l(l)+1)[(int)(c)];
+#if __POSIX_VISIBLE >= 200809
+
+#ifdef __MB_EXTENDED_CHARSETS_NON_UNICODE
+const char *__locale_ctype_ptr_l (locale_t);
+#define __CTYPE_PTR_L(__l)        __locale_ctype_ptr_l(__l)
+#else
+#define __CTYPE_PTR_L(__l) ((void) (__l), _ctype_)
+#endif
+
+#define __ctype_lookup_l(__c, __l) ((__CTYPE_PTR_L(__l)+1)[(int)(__c)])
+
+#define	isalpha_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(__CTYPE_UPPER|__CTYPE_LOWER))
+#define	isupper_l(__c,__l)	((__ctype_lookup_l(__c,__l)&(__CTYPE_UPPER|__CTYPE_LOWER))==__CTYPE_UPPER)
+#define	islower_l(__c,__l)	((__ctype_lookup_l(__c,__l)&(__CTYPE_UPPER|__CTYPE_LOWER))==__CTYPE_LOWER)
+#define	isdigit_l(__c,__l)	(__ctype_lookup_l(__c,__l)&__CTYPE_DIGIT)
+#define	isxdigit_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(__CTYPE_HEX|__CTYPE_DIGIT))
+#define	isspace_l(__c,__l)	(__ctype_lookup_l(__c,__l)&__CTYPE_SPACE)
+#define ispunct_l(__c,__l)	(__ctype_lookup_l(__c,__l)&__CTYPE_PUNCT)
+#define isalnum_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT))
+#define isprint_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(__CTYPE_PUNCT|__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT|__CTYPE_BLANK))
+#define	isgraph_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(__CTYPE_PUNCT|__CTYPE_UPPER|__CTYPE_LOWER|__CTYPE_DIGIT))
+#define iscntrl_l(__c,__l)	(__ctype_lookup_l(__c,__l)&__CTYPE_CNTRL)
+
+#ifdef __declare_extern_inline
+__declare_extern_inline(int) isblank_l(int c, locale_t l) {
+    return c == '\t' || (__ctype_lookup_l(c, l) & __CTYPE_BLANK);
 }
-
-#define	isalpha_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(_U|_L))
-#define	isupper_l(__c,__l)	((__ctype_lookup_l(__c,__l)&(_U|_L))==_U)
-#define	islower_l(__c,__l)	((__ctype_lookup_l(__c,__l)&(_U|_L))==_L)
-#define	isdigit_l(__c,__l)	(__ctype_lookup_l(__c,__l)&_N)
-#define	isxdigit_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(_X|_N))
-#define	isspace_l(__c,__l)	(__ctype_lookup_l(__c,__l)&_S)
-#define ispunct_l(__c,__l)	(__ctype_lookup_l(__c,__l)&_P)
-#define isalnum_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(_U|_L|_N))
-#define isprint_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(_P|_U|_L|_N|_B))
-#define	isgraph_l(__c,__l)	(__ctype_lookup_l(__c,__l)&(_P|_U|_L|_N))
-#define iscntrl_l(__c,__l)	(__ctype_lookup_l(__c,__l)&_C)
-
-#if defined(__GNUC__)
-#define isblank_l(__c, __l) \
-  __extension__ ({ __typeof__ (__c) __x = (__c);		\
-        (__ctype_lookup_l(__x,__l)&_B) || (int) (__x) == '\t';})
 #endif
 
 #endif /* __POSIX_VISIBLE >= 200809 */
-
-/* Non-gcc versions will get the library versions, and will be
-   slightly slower.  These macros are not NLS-aware so they are
-   disabled if the system supports the extended character sets. */
-# if defined(__GNUC__)
-#  if !defined (_MB_EXTENDED_CHARSETS_ISO) && !defined (_MB_EXTENDED_CHARSETS_WINDOWS)
-#   define toupper(__c) \
-  __extension__ ({ __typeof__ (__c) __x = (__c);	\
-      islower (__x) ? (int) __x - 'a' + 'A' : (int) __x;})
-#   define tolower(__c) \
-  __extension__ ({ __typeof__ (__c) __x = (__c);	\
-      isupper (__x) ? (int) __x - 'A' + 'a' : (int) __x;})
-#  else /* _MB_EXTENDED_CHARSETS* */
-/* Allow a gcc warning if the user passed 'char', but defer to the
-   function.  */
-#   define toupper(__c) \
-  __extension__ ({ __typeof__ (__c) __x = (__c);	\
-      (void) __CTYPE_PTR[__x]; (toupper) (__x);})
-#   define tolower(__c) \
-  __extension__ ({ __typeof__ (__c) __x = (__c);	\
-      (void) __CTYPE_PTR[__x]; (tolower) (__x);})
-#  endif /* _MB_EXTENDED_CHARSETS* */
-# endif /* __GNUC__ */
 
 #endif /* !__cplusplus */
 

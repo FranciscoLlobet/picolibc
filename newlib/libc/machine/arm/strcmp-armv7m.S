@@ -29,6 +29,8 @@
 /* Very similar to the generic code, but uses Thumb2 as implemented
    in ARMv7-M.  */
 
+#include <picolibc.h>
+
 #include "arm_asm.h"
 
 /* Parameters and result.  */
@@ -46,7 +48,7 @@
 	.thumb
 	.syntax unified
 def_fn strcmp
-	.fnstart
+	fnstart
 	.cfi_sections .debug_frame
 	.cfi_startproc
 	prologue push_ip=HAVE_PAC_LEAF
@@ -383,6 +385,6 @@ def_fn strcmp
 	.cfi_adjust_cfa_offset -4
 	epilogue push_ip=HAVE_PAC_LEAF
 	.cfi_endproc
-	.cantunwind
-	.fnend
+	cantunwind
+	fnend
 	.size strcmp, . - strcmp

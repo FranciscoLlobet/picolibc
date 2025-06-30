@@ -62,14 +62,13 @@ PORTABILITY
  * SUCH DAMAGE.
  */
 
-#include <_ansi.h>
-#include <sys/cdefs.h>
+#if defined(I_AM_QSORT_R)
+#define _BSD_SOURCE
+#else
+#define _DEFAULT_SOURCE
+#endif
 #include <stdlib.h>
 #include <stdint.h>
-
-#ifndef __GNUC__
-#define inline
-#endif
 
 #if defined(I_AM_QSORT_R)
 typedef int		 cmp_t(void *, const void *, const void *);
@@ -79,48 +78,58 @@ typedef int		 cmp_t(const void *, const void *, void *);
 typedef int		 cmp_t(const void *, const void *);
 #endif
 static inline char	*med3 (char *, char *, char *, cmp_t *, void *);
-static inline void	 swapfunc (char *, char *, size_t, int);
+static inline void	 swapfunc(char *, char *, size_t, int, int);
 
 #define min(a, b)	(a) < (b) ? a : b
+
+typedef unsigned int swap_uint_t;
+typedef unsigned long swap_ulong_t;
+
+#define need_both_sizes() (sizeof(swap_uint_t) != sizeof(swap_ulong_t))
 
 /*
  * Qsort routine from Bentley & McIlroy's "Engineering a Sort Function".
  */
-#define swapcode(TYPE, parmi, parmj, n) { 		\
-	size_t i = (n) / sizeof (TYPE); 			\
-	TYPE *pi = (TYPE *) (parmi); 		\
-	TYPE *pj = (TYPE *) (parmj); 		\
-	do { 						\
-		TYPE	t = *pi;		\
-		*pi++ = *pj;				\
-		*pj++ = t;				\
-        } while (--i > 0);				\
-}
+#define swapcode(TYPE, parmi, parmj, n) do {    \
+                size_t i = (n) / sizeof (TYPE); \
+                TYPE *pi = (TYPE *) (parmi);    \
+                TYPE *pj = (TYPE *) (parmj);    \
+                do {                            \
+                        TYPE	t = *pi;        \
+                        *pi++ = *pj;            \
+                        *pj++ = t;              \
+                } while (--i > 0);              \
+        } while(0)
 
-#define SWAPINIT(a, es) swaptype = ((uintptr_t)(a) % sizeof(long)) ||   \
-	((es) % sizeof(long)) ? 2 : ((es) == sizeof(long)) ? 0 : 1
+#define	SWAPINIT(TYPE, a, es) swaptype_ ## TYPE =	\
+	((uintptr_t)(a) % sizeof(TYPE)) ||	\
+	((es) % sizeof(TYPE)) ? 2 : ((es) == sizeof(TYPE)) ? 0 : 1;
 
 static inline void
-swapfunc (char *a,
-	char *b,
-	size_t n,
-	int swaptype)
+swapfunc(char *a, char *b, size_t n, int swaptype_swap_ulong_t, int swaptype_swap_uint_t)
 {
-	if(swaptype <= 1)
-		swapcode(long, a, b, n)
+	if (swaptype_swap_ulong_t <= 1)
+		swapcode(swap_ulong_t, a, b, n);
+        else if (need_both_sizes() && swaptype_swap_uint_t <= 1)
+                swapcode(swap_uint_t, a, b, n);
 	else
-		swapcode(char, a, b, n)
+		swapcode(unsigned char, a, b, n);
 }
 
-#define swap(a, b)					\
-	if (swaptype == 0) {				\
-		long t = *(long *)(a);			\
-		*(long *)(a) = *(long *)(b);		\
-		*(long *)(b) = t;			\
-	} else						\
-		swapfunc(a, b, es, swaptype)
+#define	swap(a, b)                                                      \
+        if (swaptype_swap_ulong_t == 0) {                               \
+                swap_ulong_t t = *(swap_ulong_t *)(a);                  \
+                *(swap_ulong_t *)(a) = *(swap_ulong_t *)(b);            \
+                *(swap_ulong_t *)(b) = t;                               \
+        } else if (need_both_sizes() && swaptype_swap_uint_t == 0) {    \
+                swap_uint_t t = *(swap_uint_t *)(a);                    \
+                *(swap_uint_t *)(a) = *(swap_uint_t *)(b);              \
+                *(swap_uint_t *)(b) = t;                                \
+        } else                                                          \
+                swapfunc(a, b, es, swaptype_swap_ulong_t, swaptype_swap_uint_t)
 
-#define vecswap(a, b, n) 	if ((n) > 0) swapfunc(a, b, n, swaptype)
+#define	vecswap(a, b, n)				\
+	if ((n) > 0) swapfunc(a, b, n, swaptype_swap_ulong_t, swaptype_swap_uint_t)
 
 #if defined(I_AM_QSORT_R)
 #define	CMP(t, x, y) (cmp((t), (x), (y)))
@@ -130,7 +139,7 @@ swapfunc (char *a,
 #define	CMP(t, x, y) (cmp((x), (y)))
 #endif
 
-static inline char *
+static __inline char *
 med3 (char *a,
 	char *b,
 	char *c,
@@ -168,6 +177,13 @@ __bsd_qsort_r (void *a,
 	size_t n,
 	size_t es,
 	void *thunk,
+        cmp_t *cmp);
+
+void
+__bsd_qsort_r (void *a,
+	size_t n,
+	size_t es,
+	void *thunk,
 	cmp_t *cmp)
 #elif defined(I_AM_GNU_QSORT_R)
 void
@@ -188,11 +204,12 @@ qsort (void *a,
 	char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
 	size_t d, r;
 	int cmp_result;
-	int swaptype, swap_cnt;
+	int swaptype_swap_ulong_t, swaptype_swap_uint_t, swap_cnt;
 	size_t recursion_level = 0;
 	struct { void *a; size_t n; } parameter_stack[PARAMETER_STACK_LEVELS];
 
-	SWAPINIT(a, es);
+	SWAPINIT(swap_ulong_t, a, es);
+	SWAPINIT(swap_uint_t, a, es);
 loop:	swap_cnt = 0;
 	if (n < 7) {
 		/* Short arrays are insertion sorted. */

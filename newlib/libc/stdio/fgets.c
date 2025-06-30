@@ -77,8 +77,7 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
 <<lseek>>, <<read>>, <<sbrk>>, <<write>>.
 */
 
-#define _DEFAULT_SOURCE
-#include <_ansi.h>
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include "local.h"
@@ -109,7 +108,7 @@ fgets (
 
   s = buf;
 
-  CHECK_INIT(ptr, fp);
+  CHECK_INIT();
 
   _newlib_flockfile_start (fp);
 #ifdef __SCLE

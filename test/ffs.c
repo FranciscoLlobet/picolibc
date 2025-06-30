@@ -40,7 +40,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-long long int
+static long long int
 rand_long_long(void)
 {
 	unsigned long long int r = 0;
@@ -51,35 +51,35 @@ rand_long_long(void)
 	return r;
 }
 
-int
+static int
 slow_ffs(int i)
 {
 	int p;
 	if (!i)
 		return 0;
-	for (p = 1; (i & (1 << (p - 1))) == 0; p++)
+	for (p = 1; (i & (1U << (p - 1))) == 0; p++)
 		;
 	return p;
 }
 
-int
+static int
 slow_ffsl(long int i)
 {
 	int p;
 	if (!i)
 		return 0;
-	for (p = 1; (i & (1L << (p - 1))) == 0; p++)
+	for (p = 1; (i & (1UL << (p - 1))) == 0; p++)
 		;
 	return p;
 }
 
-int
+static int
 slow_ffsll(long long int i)
 {
 	int p;
 	if (!i)
 		return 0;
-	for (p = 1; (i & (1LL << (p - 1))) == 0; p++)
+	for (p = 1; (i & (1ULL << (p - 1))) == 0; p++)
 		;
 	return p;
 }
@@ -108,7 +108,7 @@ main(void)
 
 	/* Test every bit position in a long long */
 	for (size_t i = 0; i < sizeof(long long) * 8; i++) {
-		long long int xll = 1LL << i;
+		long long int xll = 1ULL << i;
 		long xl = (long) xll;
 		int x = (int) xll;
 

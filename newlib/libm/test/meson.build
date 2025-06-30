@@ -138,7 +138,7 @@ math_test_src = [
   'yn_vec.c',
 ]
 
-if has_ieeefp_funcs
+if ieeefp_funcs
   math_test_src += [
     'test_ieee.c',
   ]
@@ -148,30 +148,49 @@ endif
 
 skip_math_test = meson.get_cross_property('skip_math_test', [])
 
-foreach target : targets
+foreach params : targets
+  target = params['name']
+  target_dir = params['dir']
+  target_c_args = params['c_args']
+  target_lib_prefix = params['lib_prefix']
 
-  if target in skip_math_test
+  if target.strip('_') in skip_math_test
     continue
   endif
+  skip = false
+  foreach part : target.split('_')
+    if part != '' and part in skip_math_test
+      skip = true
+    endif
+  endforeach
+  if skip
+    continue
+  endif
+  
 
-  value = get_variable('target_' + target)
 
-  libs = [get_variable('lib_c' + target)]
+  _libs = [get_variable('lib_c' + target)]
   if is_variable('lib_semihost' + target)
-    libs += [get_variable('lib_semihost' + target)]
+    _libs += [get_variable('lib_semihost' + target)]
   endif
-  if is_variable('crt0_hosted' + target)
-    objs = [get_variable('crt0_hosted'+ target)]
+
+  if is_variable(crt0_test + target)
+    _objs = [get_variable(crt0_test + target)]
   else
-    objs = []
+    _objs = []
   endif
 
-  _c_args = value[1] + get_variable('test_c_args_' + target, test_c_args)
-  _link_args = value[1] + get_variable('test_link_args_' + target, test_link_args)
-  _link_depends = get_variable('test_link_depends_' + target, test_link_depends)
+  _lib_files=[]
+  foreach _lib : _libs
+    _lib_files += _lib.full_path()
+  endforeach
 
-  _c_args = double_printf_compile_args + _c_args
-  _link_args = double_printf_link_args + _link_args
+  _c_args = target_c_args + get_variable('test_c_args' + target, test_c_args)
+  _link_args = target_c_args + get_variable('test_link_args' + target, test_link_args)
+  _link_depends = get_variable('test_link_depends' + target, test_link_depends)
+
+  _c_args = printf_compile_args_d + _c_args
+  _link_args = printf_link_args_d + _link_args
 
   foreach test_part : test_parts
     if test_part == '-1'
@@ -179,25 +198,23 @@ foreach target : targets
     else
       test_part_name = '_' + test_part
     endif
-    if target == ''
-      test_name = 'math_test' + test_part_name
-    else
-      test_name = 'math_test' + test_part_name + '_' + target
-    endif
+    test_name = 'math_test' + test_part_name + target
+
     test(test_name,
          executable(test_name, math_test_src,
 		    c_args: _c_args +  ['-DTEST_PART=' + test_part],
-		    objects: objs,
-		    link_with: libs,
+		    objects: _objs,
 		    link_args: _link_args,
+                    link_with: _libs,
 		    link_depends: _link_depends,
 		    include_directories: inc),
          depends: bios_bin,
+         suite: 'math',
          env: test_env)
   endforeach
 endforeach
 
-if enable_native_tests
+if enable_native_math_tests
 
   native_lib_m = cc.find_library('m', required: false)
 

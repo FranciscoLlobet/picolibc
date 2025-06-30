@@ -43,7 +43,7 @@ fdopen(int fd, const char *mode)
 	struct __file_bufio *bf;
         char *buf;
 
-	stdio_flags = __posix_sflags(mode, &open_flags);
+	stdio_flags = __stdio_flags(mode, &open_flags);
 	if (stdio_flags == 0)
 		return NULL;
 
@@ -57,9 +57,7 @@ fdopen(int fd, const char *mode)
         buf = (char *) (bf + 1);
 
         *bf = (struct __file_bufio)
-                FDEV_SETUP_POSIX(fd, buf, BUFSIZ, stdio_flags, 0);
-
-        __bufio_lock_init(&(bf->xfile.cfile.file));
+                FDEV_SETUP_POSIX(fd, buf, BUFSIZ, stdio_flags, __BFALL);
 
 	if (open_flags & O_APPEND)
                 (void) fseeko(&(bf->xfile.cfile.file), 0, SEEK_END);

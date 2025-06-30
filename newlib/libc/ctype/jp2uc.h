@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* based on eucjp-208A.txt */
 
 /* a1 is contiguous from a1a1 to a1fe */
-static unsigned short a1[] = {
+static const unsigned short a1[] = {
   0x3000,
   0x3001,
   0x3002,
@@ -48,7 +48,7 @@ static unsigned short a1[] = {
   0xFF40,
   0x00A8,
   0xFF3E,
-  0x203E,
+  0xFFE3,
   0xFF3F,
   0x30FD,
   0x30FE,
@@ -60,7 +60,7 @@ static unsigned short a1[] = {
   0x3006,
   0x3007,
   0x30FC,
-  0x2014,
+  0x2015,
   0x2010,
   0xFF0F,
   0xFF3C,
@@ -110,7 +110,7 @@ static unsigned short a1[] = {
   0x2032,
   0x2033,
   0x2103,
-  0x00A5,
+  0xFFE5,
   0xFF04,
   0x00A2,
   0x00A3,
@@ -129,7 +129,7 @@ static unsigned short a1[] = {
 };
 
 /* a2 has a number of holes between a2a1 and a2fe which we fill with 0x0000 */
-static unsigned short a2[] = {
+static const unsigned short a2[] = {
   0x25C6,
   0x25A1,
   0x25A0,
@@ -178,7 +178,7 @@ static unsigned short a2[] = {
   0x21D4,
   0x2200,
   0x2203,
-  0x2229,
+  0x0000,
   0x0000,
   0x0000,
   0x0000,
@@ -219,7 +219,7 @@ static unsigned short a2[] = {
   0x2020,
   0x2021,
   0x00B6,
-  0x222C,
+  0x0000,
   0x0000,
   0x0000,
   0x0000,
@@ -229,7 +229,7 @@ static unsigned short a2[] = {
 
 /* a3a1 to a3fe is mostly contiguous.  Conversion output values are
    of the form 0xFFxx where xx is (yy - 0xA0) where the input is 0xA3yy */
-static unsigned char a3[] = {
+static const unsigned char a3[] = {
   0,
   0,
   0,
@@ -294,7 +294,6 @@ static unsigned char a3[] = {
   0,
   0,
   0,
-  0,
   1,
   1,
   1,
@@ -320,7 +319,7 @@ static unsigned char a3[] = {
   1,
   1,
   1,
-  1
+  1,
 };
 
 /* a4 is contiguous from a4a1 to a4f3 */
@@ -330,7 +329,7 @@ static unsigned char a3[] = {
 /* transform = 0x30xx where xx = last byte */
 
 /* a6 is mostly contiguous from a6a1 to a6d8 */
-static unsigned short a6[] = {
+static const unsigned short a6[] = {
   0x0391,
   0x0392,
   0x0393,
@@ -390,7 +389,7 @@ static unsigned short a6[] = {
 };
 
 /* a7 is mostly contiguous from a7a1 to a7f1 */
-static unsigned short a7[] = {
+static const unsigned short a7[] = {
   0x0410,
   0x0411,
   0x0412,
@@ -475,7 +474,7 @@ static unsigned short a7[] = {
 };
 
 /* a8 is contiguous from a8a1 to a8c0 */
-static unsigned short a8[] = {
+static const unsigned short a8[] = {
   0x2500,
   0x2502,
   0x250C,
@@ -513,7 +512,7 @@ static unsigned short a8[] = {
 /* no conversion a9 to af */
 
 /* b0a1 to cfd3 is contiguous except for illegal sequences with 0xfe */
-static unsigned short b02cf[] = {
+static const unsigned short b02cf[] = {
   0x4E9C,
   0x5516,
   0x5A03,
@@ -3483,7 +3482,7 @@ static unsigned short b02cf[] = {
 
 /* d0a1 to f4a6 is contiguous */
 
-static unsigned short d02f4[] = {
+static const unsigned short d02f4[] = {
   0x5F0C,
   0x4E10,
   0x4E15,

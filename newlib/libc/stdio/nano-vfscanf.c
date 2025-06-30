@@ -103,8 +103,6 @@ Supporting OS subroutines required:
 */
 
 #define _DEFAULT_SOURCE
-#include <_ansi.h>
-#include <newlib.h>
 #include <ctype.h>
 #include <wctype.h>
 #include <stdio.h>
@@ -136,13 +134,11 @@ VFSCANF (
        const char *fmt,
        va_list ap)
 {
-  CHECK_INIT(data, fp);
+  CHECK_INIT();
   return _SVFSCANF (fp, fmt, ap);
 }
 
-int __nonnull((2))
-vfiscanf ( FILE *, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("vfscanf")));
+__nano_reference(vfscanf, vfiscanf);
 #endif /* !STRING_ONLY.  */
 
 #if defined (STRING_ONLY)
@@ -310,7 +306,7 @@ _SVFSCANF (
 
 	case 'p':
 	  scan_data.flags |= POINTER;
-          __PICOLIBC_FALLTHROUGH;
+          __fallthrough;
 	case 'x':
 	case 'X':
 	  scan_data.flags |= PFXOK;
@@ -361,7 +357,7 @@ _SVFSCANF (
 	  va_end (ap_copy);
 	  return EOF;
 
-#ifdef FLOATING_POINT
+#ifdef __IO_FLOATING_POINT
 	case 'e': case 'E':
 	case 'f': case 'F':
 	case 'g': case 'G':
@@ -399,9 +395,9 @@ _SVFSCANF (
 	ret = _scanf_chars (&scan_data, fp, &ap_copy);
       else if (scan_data.code < CT_FLOAT)
 	ret = _scanf_i (&scan_data, fp, &ap_copy);
-#ifdef FLOATING_POINT
+#ifdef __IO_FLOATING_POINT
       else if (_scanf_float)
-	ret = _scanf_float (rptr, &scan_data, fp, &ap_copy);
+	ret = _scanf_float (&scan_data, fp, &ap_copy);
 #endif
 
       if (ret == MATCH_FAILURE)
@@ -427,12 +423,7 @@ all_done:
 }
 
 #ifdef STRING_ONLY
-int
-_ssvfiscanf ( FILE *, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("_ssvfscanf")));
+__nano_reference(_ssvfscanf, ssvfiscanf);
 #else
-int
-_svfiscanf ( FILE *, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("_svfscanf")));
+__nano_reference(_svfscanf, svfiscanf);
 #endif
-

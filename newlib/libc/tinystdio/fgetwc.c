@@ -29,8 +29,11 @@
 
 #include "stdio_private.h"
 
+#undef getwc
+#undef getwc_unlocked
+
 wint_t
-fgetwc(FILE *stream)
+__STDIO_UNLOCKED(getwc)(FILE *stream)
 {
         union {
                 wchar_t wc;
@@ -39,6 +42,8 @@ fgetwc(FILE *stream)
         unsigned i;
         int sc;
         __ungetc_t unget;
+        
+        stream->flags |= __SWIDE;
 
 	if ((stream->flags & __SRD) == 0)
 		return WEOF;
@@ -56,8 +61,26 @@ fgetwc(FILE *stream)
 	return (wint_t) u.wc;
 }
 
-#ifdef _HAVE_ALIAS_ATTRIBUTE
-__strong_reference(fgetwc, getwc);
-#elif !defined(getwc)
-wint_t getwc(FILE *stream) { return fgetwc(stream); }
+#ifdef __STDIO_LOCKING
+wint_t
+getwc(FILE *stream)
+{
+    int ret;
+    __flockfile(stream);
+    ret = getwc_unlocked(stream);
+    __funlockfile(stream);
+    return ret;
+}
+#else
+#ifdef __strong_reference
+__strong_reference(getwc, getwc_unlocked);
+#else
+wint_t getwc_unlocked(FILE *stream) { return getwc(stream); }
+#endif
+#endif
+
+#ifdef __strong_reference
+__strong_reference(getwc, fgetwc);
+#else
+wint_t fgetwc(FILE *stream) { return getwc(stream); }
 #endif

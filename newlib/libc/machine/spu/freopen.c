@@ -30,7 +30,8 @@ POSSIBILITY OF SUCH DAMAGE.
 Author: Joel Schopp <jschopp@austin.ibm.com>
 */
 
-#include <_ansi.h>
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
@@ -44,7 +45,6 @@ typedef struct
   int fp;
 } c99_freopen_t;
 
-#ifndef _REENT_ONLY
 
 FILE *
 freopen (const char *__restrict file,
@@ -71,4 +71,3 @@ freopen (const char *__restrict file,
     return NULL;
   }
 }
-#endif /* ! _REENT_ONLY */

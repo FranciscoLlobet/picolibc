@@ -27,13 +27,14 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
  */
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
 
 #undef putchar
 
-#ifndef _REENT_ONLY
 
 int
 putchar (c)
@@ -44,4 +45,3 @@ putchar (c)
   return __send_to_ppe(SPE_C99_SIGNALCODE, SPE_C99_PUTCHAR, &c);
 }
 
-#endif /* ! _REENT_ONLY */

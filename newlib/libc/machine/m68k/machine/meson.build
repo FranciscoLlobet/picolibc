@@ -33,8 +33,11 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 inc_sys_headers_machine = [
+  'fenv.h',
   'fenv-fp.h'
 ]
 
-install_headers(inc_sys_headers_machine,
-		install_dir: include_dir / 'machine')
+if really_install
+  install_headers(inc_sys_headers_machine,
+                  install_dir: include_dir / 'machine')
+endif

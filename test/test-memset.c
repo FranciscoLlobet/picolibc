@@ -73,8 +73,13 @@ init_crc(void)
 }
 
 static char
-expect(size_t pos)
+expect(size_t _pos)
 {
+#ifdef __MSP430__
+    uint32_t pos = (uint32_t) _pos;
+#else
+    size_t pos = _pos;
+#endif
     unsigned int i;
     uint8_t     c = 0xff;
     for (i = 0; i < sizeof(size_t); i++)
@@ -82,7 +87,7 @@ expect(size_t pos)
     return (char) c;
 }
 
-size_t
+static size_t
 check(char *label, void *buf, size_t size, size_t start, size_t end, int c)
 {
     size_t      p;
@@ -103,7 +108,7 @@ check(char *label, void *buf, size_t size, size_t start, size_t end, int c)
     return error;
 }
 
-size_t
+static size_t
 randrange(size_t max)
 {
     size_t      pot;

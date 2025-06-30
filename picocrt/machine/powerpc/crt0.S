@@ -32,6 +32,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <picolibc.h>
+
 #define PPC_BIT(bit)            (0x8000000000000000ULL >> (bit))
 	.text
 	.section	.text.init.enter
@@ -41,15 +43,6 @@ _start:
 	/* Get stack pointer */
 	lis	%r1,__stack@h
 	ori	%r1,%r1,__stack@l
-
-#ifdef __PPC64__
-#define TARGET_THREAD_SSP_OFFSET	0x7010
-#else
-#define TARGET_THREAD_SSP_OFFSET	0x7008
-#endif	
-	/* Compute stack protector location */
-	lis	%r13,(__stack_chk_guard+TARGET_THREAD_SSP_OFFSET)@h
-	ori	%r13,%r13,(__stack_chk_guard+TARGET_THREAD_SSP_OFFSET)@l
 
 #ifdef __PPC64__
 	/* Where are we? */

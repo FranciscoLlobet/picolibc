@@ -35,8 +35,6 @@
 
 srcs_ld_use = []
 
-if have_long_double
-
 srcs_ld_arch = [
     'e_acoshl.c',
     'e_atanhl.c',
@@ -116,6 +114,7 @@ srcs_ld_common = [
   's_scalbl.c',
   's_scalbln.c',
   's_scalbnl.c',
+  's_signbitl.c',
   's_sincosl.c',
   's_sinl.c',
   's_tanl.c',
@@ -133,7 +132,5 @@ foreach file : srcs_ld
     srcs_ld_use += file
   endif
 endforeach
-
-endif
 
 src_libm_ld = files(srcs_ld_use)

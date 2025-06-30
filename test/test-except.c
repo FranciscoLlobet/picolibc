@@ -47,14 +47,26 @@ main(void)
 #ifdef __arm__
 
 #ifdef __thumb__
-    __asm__(".hword 0xde00");
+    __asm__(".inst.n 0xde00");
 #else
-    __asm__(".word 0xe7f000f0");
+    __asm__(".inst 0xe7f000f0");
 #endif
 
 #elif defined(__riscv)
 
     __asm__(".word 0x00000000");
+
+#elif defined(__aarch64__)
+
+    __asm__(".word 0x00000000");
+
+#elif defined(__RX__)
+
+    __asm__(".word 0xffffffff");
+
+#elif defined(__x86_64__) || defined(__i386__)
+
+    __asm__("ud2");
 
 #else
 

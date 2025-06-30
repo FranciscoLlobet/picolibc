@@ -51,7 +51,8 @@ double mretval = 64;
 int traperror = 1;
 char *mname;
 
-void
+#ifdef INCLUDE_GENERATE
+static void
 translate_to (FILE *file,
 	    double r)
 {
@@ -59,6 +60,7 @@ translate_to (FILE *file,
   bits.value = r;
   fprintf(file, "0x%08lx, 0x%08lx", (unsigned long) bits.parts.msw, (unsigned long) bits.parts.lsw);
 }
+#endif
 
 double
 thedouble (uint32_t msw,
@@ -96,7 +98,7 @@ thedouble (uint32_t msw,
 			(d) = (double) (f);			\
 	} while(0)
 
-int
+static int
 ffcheck_id(double is,
 	   one_line_type *p,
 	   char *name,
@@ -105,7 +107,7 @@ ffcheck_id(double is,
 	   int id)
 {
   /* Make sure the answer isn't to far wrong from the correct value */
-  __ieee_double_shape_type correct = {}, isbits;
+  __ieee_double_shape_type correct = {}, isbits = {};
   int mag;
   isbits.value = is;
 
@@ -133,6 +135,12 @@ ffcheck_id(double is,
   {
     mag = 64;
   }
+#ifdef __RX__
+  /* RX doesn't support nan at all */
+  if (isnan(correct.value) || isinf(correct.value))
+      mag = 64;
+#endif
+
 
   if (mag < error_bit)
   {
@@ -165,7 +173,7 @@ ffcheck_id(double is,
   return mag;
 }
 
-int
+static int
 ffcheck(double is,
 	one_line_type *p,
 	char *name,
@@ -175,7 +183,7 @@ ffcheck(double is,
   return ffcheck_id(is, p, name, serrno, merror, 0);
 }
 
-int
+static int
 fffcheck_id (float is,
 	     one_line_type *p,
 	     char *name,
@@ -186,7 +194,7 @@ fffcheck_id (float is,
   /* Make sure the answer isn't to far wrong from the correct value */
   __ieee_float_shape_type correct, isbits;
   __ieee_double_shape_type correct_double;
-  __ieee_double_shape_type is_double;
+  __ieee_double_shape_type is_double = {};
   int mag;
 
   (void) serrno;
@@ -217,6 +225,11 @@ fffcheck_id (float is,
   {
 	mag = 32;
   }
+#ifdef __RX__
+  /* RX doesn't support nan or inf at all */
+  if (isnan(correct.value) || isinf(correct.value))
+      mag = 32;
+#endif
 
   if (mag < error_bit)
   {
@@ -250,7 +263,7 @@ fffcheck_id (float is,
   return mag;
 }
 
-int
+static int
 fffcheck (float is,
 	  one_line_type *p,
 	  char *name,
@@ -290,7 +303,8 @@ int calc;
 extern int reduce;
 
 
-void
+#ifdef INCLUDE_GENERATE
+static void
 frontline (FILE *f,
        int mag,
        one_line_type *p,
@@ -347,8 +361,9 @@ frontline (FILE *f,
   }
   fprintf(f, ")*/\n");
 }
+#endif
 
-void
+static void
 finish (FILE *f,
        int vector,
        double result,
@@ -371,7 +386,7 @@ finish (FILE *f,
 #endif
 }
 
-void
+static void
 finish2 (FILE *f,
 	 int vector,
 	 double result,
@@ -402,7 +417,7 @@ finish2 (FILE *f,
 #endif
 }
 
-void
+static void
 ffinish (FILE *f,
        int vector,
        float fresult,
@@ -425,7 +440,7 @@ ffinish (FILE *f,
 #endif
 }
 
-void
+static void
 ffinish2 (FILE *f,
 	  int vector,
 	  float fresult,
@@ -458,7 +473,7 @@ ffinish2 (FILE *f,
 
 extern int redo;
 
-bool
+static bool
 in_float_range(double arg)
 {
 	if (isinf(arg) || isnan(arg))

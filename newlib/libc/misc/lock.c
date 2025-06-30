@@ -73,9 +73,9 @@ subroutines are required for linking multi-threaded applications.
 
 /* dummy lock routines and static locks for single-threaded apps */
 
-#ifndef __SINGLE_THREAD__
-
 #include <sys/lock.h>
+
+#ifndef __SINGLE_THREAD
 
 struct __lock {
   char unused;
@@ -131,4 +131,4 @@ __retarget_lock_release_recursive (_LOCK_T lock)
   (void) lock;
 }
 
-#endif /* !defined(__SINGLE_THREAD__) */
+#endif /* __SINGLE_THREAD */

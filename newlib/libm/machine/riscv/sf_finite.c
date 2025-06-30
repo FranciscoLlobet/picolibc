@@ -33,7 +33,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <math.h>
+#include "fdlibm.h"
 
 #if defined(__RISCV_HARD_FLOAT) && __RISCV_HARD_FLOAT >= 32
 
@@ -43,10 +43,7 @@ int finitef(float x)
 	return (fclass & (FCLASS_INF | FCLASS_NAN)) == 0;
 }
 
-#if defined(_HAVE_ALIAS_ATTRIBUTE)
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmissing-attributes"
-#endif
+#ifdef __strong_reference
 __strong_reference(finitef, __finitef);
 #else
 
@@ -56,6 +53,9 @@ __finitef(float x)
     return finitef(x);
 }
 #endif
+
+_MATH_ALIAS_i_f(finite)
+_MATH_ALIAS_i_f(__finite)
 
 #else
 #include "../../common/sf_finite.c"

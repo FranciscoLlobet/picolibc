@@ -27,12 +27,13 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
  */
+#include <picolibc.h>
+
 #include <stdio.h>
 #include <errno.h>
 
 #include "c99ppe.h"
 
-#ifndef _REENT_ONLY
 
 typedef struct
 {
@@ -54,4 +55,3 @@ perror (const char *s)
 
   return;
 }
-#endif /* ! _REENT_ONLY */

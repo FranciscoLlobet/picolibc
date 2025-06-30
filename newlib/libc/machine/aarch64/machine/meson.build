@@ -34,9 +34,12 @@
 #
 inc_machine_headers_machine = [
   '_types.h',
+  'fenv.h',
   'fenv-fp.h',
   'math.h',
 ]
 
-install_headers(inc_machine_headers_machine,
-		install_dir: include_dir / 'machine')
+if really_install
+  install_headers(inc_machine_headers_machine,
+                  install_dir: include_dir / 'machine')
+endif

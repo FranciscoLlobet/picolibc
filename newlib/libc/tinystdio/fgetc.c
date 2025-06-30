@@ -31,14 +31,19 @@
 
 #include "stdio_private.h"
 
+#undef getc
+#undef getc_unlocked
+
 int
-fgetc(FILE *stream)
+__STDIO_UNLOCKED(getc)(FILE *stream)
 {
 	int rv;
 	__ungetc_t unget;
 
-	if ((stream->flags & __SRD) == 0)
+	if ((stream->flags & __SRD) == 0) {
+		stream->flags |= __SERR;
 		return EOF;
+	}
 
 	if ((unget = __atomic_exchange_ungetc(&stream->unget, 0)) != 0)
                 return (unsigned char) (unget - 1);
@@ -53,8 +58,26 @@ fgetc(FILE *stream)
 	return (unsigned char)rv;
 }
 
-#ifdef _HAVE_ALIAS_ATTRIBUTE
-__strong_reference(fgetc, getc);
-#elif !defined(getc)
-int getc(FILE *stream) { return fgetc(stream); }
+#ifdef __STDIO_LOCKING
+int
+getc(FILE *stream)
+{
+    int ret;
+    __flockfile(stream);
+    ret = getc_unlocked(stream);
+    __funlockfile(stream);
+    return ret;
+}
+#else
+#ifdef __strong_reference
+__strong_reference(getc, getc_unlocked);
+#else
+int getc_unlocked(FILE *stream) { return getc(stream); }
+#endif
+#endif
+
+#ifdef __strong_reference
+__strong_reference(getc, fgetc);
+#else
+int fgetc(FILE *stream) { return getc(stream); }
 #endif

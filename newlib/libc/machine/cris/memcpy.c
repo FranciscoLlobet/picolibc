@@ -30,6 +30,8 @@
    result is somewhat depending on gcc generating what we expect rather
    than what we describe.  An assembly file should be used instead.  */
 
+#include <picolibc.h>
+
 #include <stddef.h>
 #include "../../string/local.h"
 
@@ -41,7 +43,7 @@
 __asm__ (".syntax no_register_prefix");
 
 void *
-__inhibit_loop_to_libcall
+__no_builtin
 memcpy(void *__restrict pdst, const void *__restrict psrc, size_t pn)
 {
   /* Now we want the parameters put in special registers.

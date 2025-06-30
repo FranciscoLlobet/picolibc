@@ -30,11 +30,11 @@ PORTABILITY
 
 */
 
-#define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 #include <complex.h>
 #include <math.h>
 
-#ifdef _HAVE_LONG_DOUBLE_MATH
+#ifdef __HAVE_LONG_DOUBLE_MATH
 
 long double complex
 clog10l(long double complex z)

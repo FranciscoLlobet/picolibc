@@ -6,14 +6,13 @@
  */
 
 #include <stdio.h>
-#include <newlib.h>
 #include <stdlib.h>
 #include <wchar.h>
 #include "check.h"
 
 int main(void)
 {
-#if defined(INTEGER_ONLY) || defined(NO_FLOATING_POINT)
+#if defined(INTEGER_ONLY) || defined(__IO_NO_FLOATING_POINT)
 
 #else
   char cbuf[512];

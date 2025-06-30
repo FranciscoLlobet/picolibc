@@ -40,12 +40,13 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <ssp/ssp.h>
 
 #ifdef TESTS_ENABLE_STACK_PROTECTOR
 static volatile bool expect_smash;
 
-void __attribute__((noinline))
-#ifdef _HAVE_CC_INHIBIT_LOOP_TO_LIBCALL
+static void __attribute__((noinline))
+#ifdef __HAVE_CC_INHIBIT_LOOP_TO_LIBCALL
 __attribute((__optimize__("-fno-tree-loop-distribute-patterns")))
 #endif
     my_strcpy(char *d, char *s)
@@ -53,9 +54,9 @@ __attribute((__optimize__("-fno-tree-loop-distribute-patterns")))
     while ((*d++ = *s++));
 }
 
-void __attribute__((noinline)) smash_array(char *source, char *dest)
+static void __attribute__((noinline)) smash_array(char *source, char *dest)
 {
-	char	local[16];
+	char	local[48];
 
 	my_strcpy(local, source);
 	local[0]++;
@@ -66,12 +67,12 @@ void
 __stack_chk_fail (void)
 {
 	if (expect_smash) {
-#ifdef TINY_STDIO
+#ifdef __TINY_STDIO
 		puts("caught expected stack smash");
 #endif
 		_exit(0);
 	} else {
-#ifdef TINY_STDIO
+#ifdef __TINY_STDIO
 		puts("caught unexpected stack smash");
 #endif
 		_exit(1);

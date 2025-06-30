@@ -1,8 +1,8 @@
 /* Copyright (c) 2017 Yaakov Selkowitz <yselkowi@redhat.com> */
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -12,9 +12,16 @@
 uintptr_t __stack_chk_guard = 0x00000aff; /* 0, 0, '\n', 255  */
 
 #else
-uintptr_t __stack_chk_guard = 0;
 
-int     getentropy (void *, size_t) _ATTRIBUTE((__weak__));
+#ifdef __THREAD_LOCAL_STORAGE_STACK_GUARD
+#include "machine/_ssp_tls.h"
+#else
+uintptr_t __stack_chk_guard = 0;
+#endif
+
+int     getentropy (void *, size_t) __weak;
+
+void __stack_chk_init (void) __attribute__((__constructor__));
 
 void
 __attribute__((__constructor__))
@@ -38,15 +45,16 @@ __stack_chk_init (void)
 }
 #endif
 
-void __stack_chk_fail (void) __attribute__((__noreturn__));
+__noreturn void __stack_chk_fail (void);
 
 #define STACK_CHK_MSG "*** stack smashing detected ***: terminated"
 
-void
-__attribute__((__noreturn__))
+__typeof(__stack_chk_fail) __stack_chk_fail_weak;
+
+__noreturn void
 __stack_chk_fail_weak (void)
 {
-#ifdef TINY_STDIO
+#ifdef __TINY_STDIO
   puts(STACK_CHK_MSG);
 #else
   static const char msg[] = STACK_CHK_MSG "\n";
@@ -57,6 +65,9 @@ __stack_chk_fail_weak (void)
 __weak_reference(__stack_chk_fail_weak, __stack_chk_fail);
 
 #ifdef __ELF__
+
+__typeof(__stack_chk_fail) __stack_chk_fail_local;
+
 void
 __attribute__((visibility ("hidden")))
 __stack_chk_fail_local (void)

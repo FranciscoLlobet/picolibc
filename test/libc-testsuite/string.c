@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <string.h>
 
@@ -30,11 +30,13 @@
  * m = message to print on failure (with formats for r & x)
 **/
 
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4)
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-warning-option"
 #pragma GCC diagnostic ignored "-Wformat-extra-args"
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
 
 #define TEST(r, f, x, m) do {                                           \
         (r) = (f);                                                      \
@@ -45,35 +47,36 @@
     } while(0)
 
 #define TEST_S(s, x, m) do {                                            \
-        if (strcmp((s),(x)) != 0) {                                     \
+        if (s == NULL || strcmp((s),(x)) != 0) {                        \
             printf(__FILE__ ":%d: [%s] != [%s] (%s)\n", __LINE__, s, x, m); \
             err++;                                                      \
         }                                                               \
     } while(0)
 
 
-int test_string(void)
+static int test_string(void)
 {
-	char b[32];
-	char *s;
+        char b[32] = {0};
+        char c[32] = {0};
+	char *s = NULL;
 	int i;
 	int err=0;
 
-	b[16]='a'; b[17]='b'; b[18]='c'; b[19]=0;
-	TEST(s, strcpy(b, b+16), b, "wrong return %p != %p");
+	c[0]='a'; c[1]='b'; c[2]='c'; c[3]=0;
+	TEST(s, strcpy(b, c), b, "wrong return %p != %p");
 	TEST_S(s, "abc", "strcpy gave incorrect string");
-	TEST(s, strcpy(b+1, b+16), b+1, "wrong return %p != %p");
+	TEST(s, strcpy(b+1, c), b+1, "wrong return %p != %p");
 	TEST_S(s, "abc", "strcpy gave incorrect string");
-	TEST(s, strcpy(b+2, b+16), b+2, "wrong return %p != %p");
+	TEST(s, strcpy(b+2, c), b+2, "wrong return %p != %p");
 	TEST_S(s, "abc", "strcpy gave incorrect string");
-	TEST(s, strcpy(b+3, b+16), b+3, "wrong return %p != %p");
+	TEST(s, strcpy(b+3, c), b+3, "wrong return %p != %p");
 	TEST_S(s, "abc", "strcpy gave incorrect string");
 
-	TEST(s, strcpy(b+1, b+17), b+1, "wrong return %p != %p");
+	TEST(s, strcpy(b+1, c+1), b+1, "wrong return %p != %p");
 	TEST_S(s, "bc", "strcpy gave incorrect string");
-	TEST(s, strcpy(b+2, b+18), b+2, "wrong return %p != %p");
+	TEST(s, strcpy(b+2, c+2), b+2, "wrong return %p != %p");
 	TEST_S(s, "c", "strcpy gave incorrect string");
-	TEST(s, strcpy(b+3, b+19), b+3, "wrong return %p != %p");
+	TEST(s, strcpy(b+3, c+3), b+3, "wrong return %p != %p");
 	TEST_S(s, "", "strcpy gave incorrect string");
 
 	TEST(s, memset(b, 'x', sizeof b), b, "wrong return %p != %p");

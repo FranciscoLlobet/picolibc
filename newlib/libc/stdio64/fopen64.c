@@ -49,11 +49,7 @@ Supporting OS subroutines required: <<close>>, <<fstat64>>, <<isatty>>,
 
 /* Copied from fopen.c */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "%W% (Berkeley) %G%";
-#endif /* LIBC_SCCS and not lint */
-
-#define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -80,9 +76,7 @@ fopen64 (
     {
       _newlib_sfp_lock_start ();
       fp->_flags = 0;		/* release */
-#ifndef __SINGLE_THREAD__
       __lock_close_recursive (fp->_lock);
-#endif
       _newlib_sfp_lock_end ();
       return NULL;
     }

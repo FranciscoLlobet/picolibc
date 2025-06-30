@@ -30,12 +30,12 @@ POSSIBILITY OF SUCH DAMAGE.
 Author: Joel Schopp <jschopp@austin.ibm.com>
 */
 
-#include <_ansi.h>
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
 
-#ifndef _REENT_ONLY
 int
 fclose (FILE * fp)
 {
@@ -51,4 +51,3 @@ fclose (FILE * fp)
 
   return ret;
 }
-#endif /* ! _REENT_ONLY */

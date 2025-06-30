@@ -1,9 +1,11 @@
-#include <newlib.h>
 
-#ifndef _FVWRITE_IN_STREAMIO
+#include <picolibc.h>
+
+#ifndef __FVWRITE_IN_STREAMIO
 
 #include <stdio.h>
 #include <wchar.h>
+#include "local.h"
 
 int
 __sfputws (

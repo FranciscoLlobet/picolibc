@@ -30,12 +30,13 @@ POSSIBILITY OF SUCH DAMAGE.
 Author: Joel Schopp <jschopp@austin.ibm.com>
 */
 
+#include <picolibc.h>
+
 #include <stdio.h>
 
 #include "c99ppe.h"
 
 
-#ifndef _REENT_ONLY
 
 long
 ftell (FILE * fp)
@@ -48,4 +49,3 @@ ftell (FILE * fp)
 
   return __send_to_ppe(SPE_C99_SIGNALCODE, SPE_C99_FTELL, &ret);
 }
-#endif /* ! _REENT_ONLY */

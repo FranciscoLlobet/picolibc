@@ -13,6 +13,8 @@
  * they apply.
  */
 
+#include <picolibc.h>
+
 #include "m68kasm.h"
 
 #if defined (__mcoldfire__) || defined (__mc68020__) || defined (__mc68030__) || defined (__mc68040__) || defined (__mc68060__)
@@ -104,10 +106,11 @@ SYM(memcpy):
 .Lresidue:
 #if !defined (__mcoldfire__)
 	dbra	d1,1b		| loop until done
+	sub.l	#0x10000,d1
 #else
 	subq.l	#1,d1
-	bpl	1b
 #endif
+	bpl	1b
 	move.l	4(sp),a0	| return value
 	move.l	a0,d0		| in both a0 and d0
 	rts

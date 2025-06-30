@@ -26,16 +26,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <picolibc.h>
+
 #include "../../string/bzero.c"
 
 /* Support the alias for the __aeabi_memclr which may
    assume memory alignment.  */
 
-void __aeabi_memclr4 (void *dest, size_t n)
-	_ATTRIBUTE ((alias ("bzero"), weak));
-
-void __aeabi_memclr8 (void *dest, size_t n)
-	_ATTRIBUTE ((alias ("bzero"), weak));
-
-void __aeabi_memclr (void *dest, size_t n)
-	_ATTRIBUTE ((alias ("bzero"), weak));
+__weak_reference(bzero, __aeabi_memclr4);
+__weak_reference(bzero, __aeabi_memclr8);
+__weak_reference(bzero, __aeabi_memclr);

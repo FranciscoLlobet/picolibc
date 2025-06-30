@@ -24,7 +24,6 @@
  * SUCH DAMAGE.
  */
 
-//__FBSDID("$FreeBSD: src/lib/msun/ld128/s_exp2l.c,v 1.3 2008/02/13 10:44:44 bde Exp $");
 
 
 
@@ -37,7 +36,7 @@
 #if 0 /* XXX Prevent gcc from erroneously constant folding this. */
 static const long double twom10000 = 0x1p-10000L;
 #else
-static volatile long double twom10000 = 0x1p-10000L;
+static const volatile long double twom10000 = 0x1p-10000L;
 #endif
 
 static const long double

@@ -42,10 +42,21 @@
 
 #define __BALL  0x0001          /* bufio buf is allocated by stdio */
 #define __BLBF  0x0002          /* bufio is line buffered */
+#define __BFALL 0x0004          /* FILE is allocated by stdio */
+#define __BFPTR 0x0008          /* funcs need pointers instead of ints */
+
+union __file_bufio_cookie {
+        int	fd;
+        void    *ptr;
+};
+
+#if !defined(__SINGLE_THREAD) && !defined(__STDIO_LOCKING)
+#define __STDIO_BUFIO_LOCKING
+#endif
 
 struct __file_bufio {
         struct __file_ext xfile;
-	int	fd;
+        const void *ptr;
         uint8_t dir;
         uint8_t bflags;
         __off_t pos;    /* FD position */
@@ -53,22 +64,34 @@ struct __file_bufio {
         int     size;   /* sizeof buf */
 	int	len;    /* valid data in buf */
 	int	off;    /* offset of data in buf */
-        ssize_t (*read)(int fd, void *buf, size_t count);
-        ssize_t (*write)(int fd, const void *buf, size_t count);
-        __off_t (*lseek)(int fd, __off_t offset, int whence);
-        int     (*close)(int fd);
-#ifndef __SINGLE_THREAD__
+        union {
+                ssize_t (*read_int)(int fd, void *buf, size_t count);
+                ssize_t (*read_ptr)(void *ptr, void *buf, size_t count);
+        };
+        union {
+                ssize_t (*write_int)(int fd, const void *buf, size_t count);
+                ssize_t (*write_ptr)(void *ptr, const void *buf, size_t count);
+        };
+        union {
+                __off_t (*lseek_int)(int fd, __off_t offset, int whence);
+                __off_t (*lseek_ptr)(void *ptr, __off_t offset, int whence);
+        };
+        union {
+                int     (*close_int)(int fd);
+                int     (*close_ptr)(void *ptr);
+        };
+#ifdef __STDIO_BUFIO_LOCKING
 	_LOCK_T lock;
 #endif
 };
 
 #define FDEV_SETUP_BUFIO(_fd, _buf, _size, _read, _write, _lseek, _close, _rwflag, _bflags) \
         {                                                               \
-                .xfile = FDEV_SETUP_EXT(__bufio_put, __bufio_get,       \
+                .xfile = FDEV_SETUP_EXT(__bufio_put, __bufio_get,     \
                                         __bufio_flush, __bufio_close,   \
                                         __bufio_seek, __bufio_setvbuf,  \
                                         (_rwflag) | __SBUF),            \
-                .fd = _fd,                                              \
+                .ptr = (void *) (intptr_t) (_fd),                       \
                 .dir = 0,                                               \
                 .bflags = (_bflags),                                    \
                 .pos = 0,                                               \
@@ -76,31 +99,64 @@ struct __file_bufio {
                 .size = _size,                                          \
                 .len = 0,                                               \
                 .off = 0,                                               \
-                .read = _read,                                          \
-                .write = _write,                                        \
-                .lseek = _lseek,                                        \
-                .close = _close,                                        \
+                { .read_int = _read },                                  \
+                { .write_int = _write },                                \
+                { .lseek_int = _lseek },                                \
+                { .close_int = _close }                                 \
         }
 
-static inline void __bufio_lock_init(FILE *f) {
-	(void) f;
-	__lock_init(((struct __file_bufio *) f)->lock);
-}
+#define FDEV_SETUP_BUFIO_PTR(_ptr, _buf, _size, _read, _write, _lseek, _close, _rwflag, _bflags) \
+        {                                                               \
+                .xfile = FDEV_SETUP_EXT(__bufio_put, __bufio_get,     \
+                                        __bufio_flush, __bufio_close,   \
+                                        __bufio_seek, __bufio_setvbuf,  \
+                                        (_rwflag) | __SBUF),            \
+                .ptr = _ptr,                                            \
+                .dir = 0,                                               \
+                .bflags = (_bflags) | __BFPTR,                          \
+                .pos = 0,                                               \
+                .buf = _buf,                                            \
+                .size = _size,                                          \
+                .len = 0,                                               \
+                .off = 0,                                               \
+                { .read_ptr = _read },                                  \
+                { .write_ptr = _write },                                \
+                { .lseek_ptr = _lseek },                                \
+                { .close_ptr = _close }                                 \
+        }
+
+#ifdef __STDIO_BUFIO_LOCKING
+void
+__bufio_lock_init(FILE *f);
+#endif
 
 static inline void __bufio_lock_close(FILE *f) {
+#ifdef __STDIO_BUFIO_LOCKING
+        struct __file_bufio *bf = (struct __file_bufio *) f;
+        if (bf->lock) {
+            __lock_release(bf->lock);
+            __lock_close(bf->lock);
+        }
+#endif
 	(void) f;
-        __lock_release(((struct __file_bufio *) f)->lock);
-	__lock_close(((struct __file_bufio *) f)->lock);
 }
 
 static inline void __bufio_lock(FILE *f) {
+#ifdef __STDIO_BUFIO_LOCKING
+        struct __file_bufio *bf = (struct __file_bufio *) f;
+        if (!bf->lock)
+            __lock_init(bf->lock);
+	__lock_acquire(bf->lock);
+#endif
 	(void) f;
-	__lock_acquire(((struct __file_bufio *) f)->lock);
 }
 
 static inline void __bufio_unlock(FILE *f) {
 	(void) f;
-	__lock_release(((struct __file_bufio *) f)->lock);
+#ifdef __STDIO_BUFIO_LOCKING
+        struct __file_bufio *bf = (struct __file_bufio *) f;
+	__lock_release(bf->lock);
+#endif
 }
 
 int

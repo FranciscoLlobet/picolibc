@@ -24,14 +24,15 @@
  * SUCH DAMAGE.
  */
 
+#define _DEFAULT_SOURCE
 #include <strings.h>
 
 int
 ffsl(long i)
 {
-#ifdef _HAVE_BUILTIN_FFSL
+#if __HAVE_BUILTIN_FFSL
 	return (__builtin_ffsl(i));
-#elif defined(_HAVE_BUILTIN_CTZL)
+#elif __HAVE_BUILTIN_CTZL
 	if (i == 0)
 		return 0;
 	return __builtin_ctzl((unsigned long)i) + 1;

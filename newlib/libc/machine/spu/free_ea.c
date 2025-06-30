@@ -29,13 +29,15 @@ POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+#include <picolibc.h>
+
 #include <stddef.h>
 #include <sys/syscall.h>
 #include "ea_internal.h"
 #include <ea.h>
 #include <spu_cache.h>
 
-extern void __cache_flush (void) __attribute__ ((weak));
+extern void __cache_flush (void) __weak;
 
 COMPAT_EA_ALIAS (free_ea);
 

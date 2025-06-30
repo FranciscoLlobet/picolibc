@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#ifdef __GNUC__
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4)
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-warning-option"
 #pragma GCC diagnostic ignored "-Wanalyzer-unsafe-call-within-signal-handler"
@@ -53,10 +53,15 @@
 static void
 abrt_handler(int sig)
 {
-    if (sig == (int) SIGABRT)
+    if (sig == (int) SIGABRT) {
+#ifdef SANITIZE_TRAP_ON_ERROR
+        _Exit(1);
+#else
         _Exit(0);
+#endif
+    }
     else {
-#ifdef TINY_STDIO
+#ifdef __TINY_STDIO
         printf("unexpected signal %d\n", sig);
         fflush(stdout);
 #endif
@@ -70,7 +75,7 @@ abrt_handler(int sig)
 
 static volatile int ten = 10;
 
-#ifdef __GNUC__
+#if ((__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __GNUC__ > 4)
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-warning-option"
 /* 'bsize' is used directly with malloc/realloc which confuses -fanalyzer */

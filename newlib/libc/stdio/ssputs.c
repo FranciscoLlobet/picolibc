@@ -1,9 +1,9 @@
-#include <newlib.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "local.h"
 
 int
 __ssputs (
@@ -62,7 +62,7 @@ __ssputs (
 	return 0;
 
 err:
-	_REENT_ERRNO(ptr) = ENOMEM;
+	errno = ENOMEM;
 	fp->_flags |= __SERR;
 	return EOF;
 }

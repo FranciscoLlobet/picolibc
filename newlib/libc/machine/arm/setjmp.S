@@ -3,6 +3,8 @@
    Copyright (c) 1997 Nick Clifton, Cygnus Solutions
  */
 
+#include <picolibc.h>
+
 #include "machine/acle-compat.h"
 
 /* ANSI concatenation macros.  */
@@ -79,10 +81,10 @@
     covers all the cases we need in this file for hardware
     floating-point and should be compatible with all required FPUs
     that we need to support.  */
-# if __ARM_FP
+# if __ARM_FP && !__clang__
 	.fpu vfpxd
 # endif
-# if __ARM_FEATURE_MVE
+# if __ARM_FEATURE_MVE && !__clang__
 	.arch_extension mve
 # endif
 #endif
@@ -183,6 +185,7 @@ SYM (.arm_start_of.\name):
 	.align 2
 	MODE
 	.globl SYM (\name)
+	.cfi_sections .debug_frame
 	.cfi_startproc
 	TYPE (\name)
 SYM (\name):

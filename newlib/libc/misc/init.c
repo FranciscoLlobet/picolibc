@@ -12,37 +12,39 @@
 
 /* Handle ELF .{pre_init,init,fini}_array sections.  */
 #include <sys/types.h>
+#include <sys/_initfini.h>
 
-#ifdef _HAVE_INITFINI_ARRAY
-
-/* These magic symbols are provided by the linker.  */
-extern void (*__preinit_array_start []) (void) __attribute__((weak));
-extern void (*__preinit_array_end []) (void) __attribute__((weak));
-extern void (*__init_array_start []) (void) __attribute__((weak));
-extern void (*__init_array_end []) (void) __attribute__((weak));
-
-#ifdef _HAVE_INIT_FINI
-extern void _init (void) __attribute__((weak));
-#endif
+#ifdef __INIT_FINI_ARRAY
 
 /* Iterate over all the init routines.  */
 void
 __libc_init_array (void)
 {
-  size_t count;
-  size_t i;
+    void (**fn)(void);
+    void (**fn_end)(void);
 
-  count = __preinit_array_end - __preinit_array_start;
-  for (i = 0; i < count; i++)
-    __preinit_array_start[i] ();
+#ifdef __INIT_FINI_FUNCS
+    fn = __preinit_array_start;
+    fn_end = __preinit_array_end;
+    while (fn != fn_end)
+        (*fn++) ();
 
-#ifdef _HAVE_INIT_FINI
-  if (_init)
-    _init ();
+    if (_init)
+        _init ();
+
+    fn = __init_array_start;
+    fn_end = __init_array_end;
+    while (fn != fn_end)
+        (*fn++) ();
+#else
+    /*
+     * The init array immediately follows the preinit array,
+     * so we can just run both in one loop
+     */
+    fn = __bothinit_array_start;
+    fn_end = __bothinit_array_end;
+    while (fn != fn_end)
+        (*fn++)();
 #endif
-
-  count = __init_array_end - __init_array_start;
-  for (i = 0; i < count; i++)
-    __init_array_start[i] ();
 }
 #endif

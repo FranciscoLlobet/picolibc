@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <picolibc.h>
+
 #include "arm_asm.h"
 
 	.thumb
@@ -34,7 +36,7 @@
 	.type	memset, %function
 	.p2align 1
 memset:
-	.fnstart
+	fnstart
 	.cfi_sections .debug_frame
 	.cfi_startproc
 	prologue 4 6 push_ip=HAVE_PAC_LEAF
@@ -110,8 +112,8 @@ memset:
 	mov	r3, r0
 	b	3b
 	.cfi_endproc
-	.cantunwind
-	.fnend
+	cantunwind
+	fnend
 	.size memset, . - memset
 
 #if defined(__linux__) && defined(__ELF__)

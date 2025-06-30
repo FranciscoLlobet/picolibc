@@ -36,21 +36,22 @@
 #include <stdio.h>
 #include <math.h>
 #include <fenv.h>
+#include "rounding-mode.h"
 
 double
-div(double a, double b)
+div_d(double a, double b)
 {
 	return a/b;
 }
 
 double
-mul(double a, double b)
+mul_d(double a, double b)
 {
 	return a * b;
 }
 
 double
-sub(double a, double b)
+sub_d(double a, double b)
 {
 	return a - b;
 }

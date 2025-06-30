@@ -29,23 +29,26 @@
 
 /* $Id: gets.c 1944 2009-04-01 23:12:20Z arcanum $ */
 
+#define _PICOLIBC_USE_DEPRECATED_GETS
 #include "stdio_private.h"
 
 char *
 gets(char *str)
 {
+        FILE *stream = stdin;
 	char *cp = str;
 
+        __flockfile(stream);
         for (;;) {
-                int c = getchar();
+                int c = getc_unlocked(stream);
                 switch (c) {
                 case EOF:
-                        if (ferror(stdin) || cp == str)
-                                return NULL;
-                        __PICOLIBC_FALLTHROUGH;
+                        if (ferror(stream) || cp == str)
+                                __funlock_return(stream, NULL);
+                        __fallthrough;
                 case '\n':
                         *cp = '\0';
-                        return str;
+                        __funlock_return(stream, str);
                 default:
                         *cp++ = (char)c;
                         break;

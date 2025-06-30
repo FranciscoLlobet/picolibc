@@ -1,6 +1,5 @@
 /* Copyright (c) 2002 Jeff Johnston <jjohnstn@redhat.com> */
 #include <wctype.h>
-#include <newlib.h>
 #include "check.h"
 
 int main(void)
@@ -57,6 +56,10 @@ int main(void)
 
   x = wctype ("unknown");
   CHECK (x == 0);
+
+  CHECK(!iswprint((wint_t) __WCHAR_MAX__));
+  CHECK(!iswcntrl((wint_t) __WCHAR_MAX__));
+  CHECK(!iswgraph((wint_t) __WCHAR_MAX__));
 
   exit (0);
 }

@@ -1,12 +1,11 @@
-#include <newlib.h>
 
-#ifndef _FVWRITE_IN_STREAMIO
+#include <picolibc.h>
+
+#ifndef __FVWRITE_IN_STREAMIO
 
 #include <stdio.h>
 #include <wchar.h>
-
-extern int __ssputs (FILE *fp, const char *buf,
-		       size_t len);
+#include "local.h"
 
 int
 __ssputws (

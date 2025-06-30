@@ -30,10 +30,8 @@
  * SUCH DAMAGE.
  */
 
-#include <newlib.h>
 
 #define _DEFAULT_SOURCE
-#include <_ansi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,7 +53,7 @@ char *__cvt (_PRINTF_FLOAT_TYPE value, int ndigits,
 
 int __exponent (char *p0, int exp, int fmtch);
 
-#ifdef FLOATING_POINT
+#ifdef __IO_FLOATING_POINT
 
 /* Using reentrant DATA, convert finite VALUE into a string of digits
    with no decimal point, using NDIGITS precision and FLAGS as guides
@@ -65,13 +63,14 @@ int __exponent (char *p0, int exp, int fmtch);
    [aAeEfFgG]; if it is [aA], then the return string lives in BUF,
    otherwise the return value shares the mprec reentrant storage.  */
 char *
-__cvt (struct _reent *data, _PRINTF_FLOAT_TYPE value, int ndigits, int flags,
+__cvt (_PRINTF_FLOAT_TYPE value, int ndigits, int flags,
        char *sign, int *decpt, int ch, int *length, char *buf)
 {
   int mode, dsgn;
   char *digits, *bp, *rve;
   union double_union tmp;
 
+  (void) buf;
   tmp.d = value;
   /* This will check for "< 0" and "-0.0".  */
   if (word0 (tmp) & Sign_bit)
@@ -162,15 +161,14 @@ __exponent (char *p0, int exp, int fmtch)
 
 /* Decode and print floating point number specified by "eEfgG".  */
 int
-_printf_float (struct _reent *data,
-	       struct _prt_data_t *pdata,
+_printf_float (struct _prt_data_t *pdata,
 	       FILE * fp,
-	       int (*pfunc) (struct _reent *, FILE *, const char *,
+	       int (*pfunc) (FILE *, const char *,
 			     size_t len), va_list * ap)
 {
 #define _fpvalue (pdata->_double_)
 
-  char *decimal_point = localeconv ()->decimal_point;
+  char *decimal_point = DECIMAL_POINT;
   size_t decp_len = strlen (decimal_point);
   /* Temporary negative sign for floats.  */
   char softsign;
@@ -180,15 +178,14 @@ _printf_float (struct _reent *data,
   int expsize = 0;
   /* Actual number of digits returned by cvt.  */
   int ndig = 0;
-  char *cp;
-  int n;
+  char *cp = NULL;
   /* Field size expanded by dprec(not for _printf_float).  */
   int realsz;
   char code = pdata->code;
 
   if (pdata->flags & LONGDBL)
     {
-      _fpvalue = (double) GET_ARG (N, *ap, _LONG_DOUBLE);
+      _fpvalue = (double) GET_ARG (N, *ap, long double);
     }
   else
     {
@@ -236,7 +233,7 @@ _printf_float (struct _reent *data,
 
   pdata->flags |= FPT;
 
-  cp = __cvt (data, _fpvalue, pdata->prec, pdata->flags, &softsign,
+  cp = __cvt (_fpvalue, pdata->prec, pdata->flags, &softsign,
 	      &expt, code, &ndig, cp);
 
   if (code == 'g' || code == 'G')
@@ -287,7 +284,7 @@ _printf_float (struct _reent *data,
   if (softsign)
     pdata->l_buf[0] = '-';
 print_float:
-  if (_printf_common (data, pdata, &realsz, fp, pfunc) == -1)
+  if (_printf_common (pdata, &realsz, fp, pfunc) == -1)
     goto error;
 
   if ((pdata->flags & FPT) == 0)

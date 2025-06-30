@@ -17,12 +17,7 @@
 /* This code was based on vsprintf.c */
 /* doc in vfprintf.c */
 
-#if defined(LIBC_SCCS) && !defined(lint)
-static char sccsid[] = "%W% (Berkeley) %G%";
-#endif /* LIBC_SCCS and not lint */
-
-#define _DEFAULT_SOURCE
-#include <_ansi.h>
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -52,8 +47,4 @@ vasprintf (
   return ret;
 }
 
-#ifdef _NANO_FORMATTED_IO
-int
-vasiprintf (char **, const char *, __VALIST)
-       _ATTRIBUTE ((__alias__("vasprintf")));
-#endif
+__nano_reference(vasprintf, vasiprintf);

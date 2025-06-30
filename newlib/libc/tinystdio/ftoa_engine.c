@@ -143,7 +143,7 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
          * frac and a 64 bit int overlap in memory and select/weigh the
          * upper 32 bits that way. For starters, this is less risky:
          */
-        int64_t prod = (int64_t)frac * (int64_t)factorTable[idx];
+        uint64_t prod = (uint64_t)frac * (uint64_t)factorTable[idx];
 
         /*
          * The expConvFactorTable are factor are correct iff the lower 3 exponent
@@ -161,12 +161,14 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
 
         uint8_t hadNonzeroDigit = 0; /* have seen a non-zero digit flag */
         uint8_t outputIdx = 0;
-        int64_t decimal = 100000000000000ull;
+        uint64_t decimal = 100000000000000ull;
 	uint8_t saveMaxDigits = maxDigits;
 
         do {
             /* Compute next digit */
-            char digit = prod / decimal + '0';
+            char digit = '0';
+            if (prod != 0)
+                digit += prod / decimal;
 
             if(!hadNonzeroDigit)
             {
@@ -175,7 +177,8 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
                  */
                 if (digit == '0') {
                     exp10--;
-		    prod = prod % decimal;
+                    if (prod != 0)
+                        prod = prod % decimal;
 		    decimal /= 10;
                     continue;
                 }
@@ -186,12 +189,13 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
                 /* If limiting decimals... */
                 if(fmode)
                 {
-		    maxDigits = min(maxDigits, max(1, maxDecimals + exp10 + 1));
+		    maxDigits = min(maxDigits, max(maxDecimals<0, maxDecimals + exp10 + 1));
 		    if (maxDigits == 0)
 			break;
                 }
             }
-            prod = prod % decimal;
+            if (prod != 0)
+                prod = prod % decimal;
             decimal /= 10;
 
             /* Now we have a digit. */
@@ -213,7 +217,7 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
 
         /* Rounding: */
         decimal *= 10;
-        if (prod - (decimal >> 1) >= 0)
+        if (prod >= (decimal >> 1))
         {
 	    uint8_t rounded;
         round_up:
@@ -243,7 +247,6 @@ int __ftoa_engine(float val, struct dtoa *ftoa, int maxDigits, bool fmode, int m
 		exp10++;
 		if (fmode)
 		    maxDigits = min(saveMaxDigits, max(1, maxDecimals + exp10 + 1));
-		flags |= DTOA_CARRY;
 	    }
         }
         ftoa->exp = exp10;

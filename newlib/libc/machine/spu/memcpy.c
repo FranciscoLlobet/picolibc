@@ -30,6 +30,8 @@
   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
   */
+#include <picolibc.h>
+
 #include <spu_intrinsics.h>
 #include <stddef.h>
 #include <vec_literal.h>
@@ -44,7 +46,7 @@
  * casing specific optimal alignments.
  */
 void *
-__inhibit_loop_to_libcall
+__no_builtin
 memcpy(void * __restrict__ dest, const void * __restrict__ src, size_t n)
 {
   int adjust, delta;

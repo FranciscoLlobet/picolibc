@@ -24,13 +24,12 @@ RETURNS
 File pointer or <<NULL>>, as for <<fopen>>.
 */
 
-#define _DEFAULT_SOURCE
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/fcntl.h>
 
 #include <stdio.h>
 #include <errno.h>
-#include <_syslist.h>
 #include <sys/lock.h>
 #include "../stdio/local.h"
 
@@ -41,7 +40,7 @@ fdopen64 (
 {
   register FILE *fp;
   int flags, oflags;
-#ifdef _HAVE_FCNTL
+#ifdef __HAVE_FCNTL
   int fdflags, fdmode;
 #endif
 
@@ -49,13 +48,13 @@ fdopen64 (
     return 0;
 
   /* make sure the mode the user wants is a subset of the actual mode */
-#ifdef _HAVE_FCNTL
+#ifdef __HAVE_FCNTL
   if ((fdflags = fcntl (fd, F_GETFL, 0)) < 0)
     return 0;
   fdmode = fdflags & O_ACCMODE;
   if (fdmode != O_RDWR && (fdmode != (oflags & O_ACCMODE)))
     {
-      _REENT_ERRNO(ptr) = EBADF;
+      errno = EBADF;
       return 0;
     }
 #endif
@@ -70,7 +69,7 @@ fdopen64 (
      streams.  Someone may later clear O_APPEND on fileno(fp), but the
      stream must still remain in append mode.  Rely on __sflags
      setting __SAPP properly.  */
-#ifdef _HAVE_FCNTL
+#ifdef __HAVE_FCNTL
   if ((oflags & O_APPEND) && !(fdflags & O_APPEND))
     fcntl (fd, F_SETFL, fdflags | O_APPEND);
 #endif

@@ -45,28 +45,16 @@
 #include <wchar.h>
 #include <float.h>
 #include <math.h>
+#include <limits.h>
 #include <stdio-bufio.h>
 #include <sys/lock.h>
-
-/* values for PRINTF_LEVEL */
-#define PRINTF_MIN 1
-#define PRINTF_STD 2
-#define PRINTF_LLONG 3
-#define PRINTF_FLT 4
-#define PRINTF_DBL 5
-
-/* values for SCANF_LEVEL */
-#define SCANF_MIN 1
-#define SCANF_STD 2
-#define SCANF_LLONG 3
-#define SCANF_FLT 4
-#define SCANF_DBL 5
 
 struct __file_str {
 	struct __file file;	/* main file struct */
         char	*pos;		/* current buffer position */
         char    *end;           /* end of buffer */
         size_t  size;           /* size of allocated storage */
+        bool    alloc;          /* current storage was allocated */
 };
 
 int
@@ -101,7 +89,8 @@ bool __matchcaseprefix(const char *input, const char *pattern);
 #define FDEV_SETUP_STRING_READ(_s) {		\
 		.file = {			\
 			.flags = __SRD,		\
-			.get = __file_str_get	\
+                        .get = __file_str_get,  \
+                        __LOCK_INIT_NONE        \
 		},				\
 		.pos = (char *) (_s)		\
 	}
@@ -109,61 +98,197 @@ bool __matchcaseprefix(const char *input, const char *pattern);
 #define FDEV_SETUP_WSTRING_READ(_s) {		\
 		.file = {			\
 			.flags = __SRD,		\
-			.get = __file_wstr_get	\
+			.get = __file_wstr_get,	\
+                        __LOCK_INIT_NONE        \
 		},				\
                 .pos = (char *) (_s),           \
                 .end = (char *) (_s)            \
 	}
 
-#define FDEV_SETUP_STRING_WRITE(_s, _size) {	\
+#define FDEV_STRING_WRITE_END(_s, _n) \
+    (((int) (_n) < 0) ? NULL : ((_n) ? (_s) + (_n)-1 : (_s)))
+
+#define FDEV_SETUP_STRING_WRITE(_s, _end) {	\
 		.file = {			\
 			.flags = __SWR,		\
-			.put = __file_str_put	\
+			.put = __file_str_put,	\
+                        __LOCK_INIT_NONE        \
 		},				\
 		.pos = (_s),			\
-                .end = (_s) + (_size),          \
+                .end = (_end),                  \
 	}
 
-#define FDEV_SETUP_STRING_ALLOC() {		\
+#define FDEV_SETUP_STRING_ALLOC() {  \
 		.file = {			\
 			.flags = __SWR,		\
-			.put = __file_str_put_alloc	\
+			.put = __file_str_put_alloc,	\
+                        __LOCK_INIT_NONE        \
 		},				\
 		.pos = NULL,			\
-		.end = NULL,			\
+                .end = NULL,                    \
                 .size = 0,                      \
+                .alloc = false,                 \
 	}
 
-#ifdef POSIX_IO
+#define FDEV_SETUP_STRING_ALLOC_BUF(_buf, _size) {  \
+		.file = {			\
+			.flags = __SWR,		\
+			.put = __file_str_put_alloc,	\
+                        __LOCK_INIT_NONE        \
+		},				\
+		.pos = _buf,			\
+                .end = (char *) (_buf) + (_size), \
+                .size = _size,                  \
+                .alloc = false,                 \
+	}
 
-#define FDEV_SETUP_POSIX(fd, buf, size, rwflags, bflags)        \
-        FDEV_SETUP_BUFIO(fd, buf, size,                         \
-                         read, write,                           \
+#define _FDEV_BUFIO_FD(bf) ((int)((intptr_t) (bf)->ptr))
+
+#define IO_VARIANT_IS_FLOAT(v)        ((v) == __IO_VARIANT_FLOAT || (v) == __IO_VARIANT_DOUBLE)
+
+/*
+ * While there are notionally two different ways to invoke the
+ * callbacks (one with an int and the other with a pointer), they are
+ * functionally identical on many architectures. Check for that and
+ * skip the extra code.
+ */
+#if __SIZEOF_POINTER__ == __SIZEOF_INT__ || defined(__x86_64) || defined(__arm__) || defined(__riscv)
+#define BUFIO_ABI_MATCHES
+#endif
+
+#if defined(__has_feature)
+#if __has_feature(undefined_behavior_sanitizer)
+#undef BUFIO_ABI_MATCHES
+#endif
+#endif
+
+/* Buffered I/O routines for tiny stdio */
+
+static inline ssize_t bufio_read(struct __file_bufio *bf, void *buf, size_t count)
+{
+#ifndef BUFIO_ABI_MATCHES
+    if (!(bf->bflags & __BFPTR))
+        return (bf->read_int)(_FDEV_BUFIO_FD(bf), buf, count);
+#endif
+    return (bf->read_ptr)((void *) bf->ptr, buf, count);
+}
+
+static inline ssize_t bufio_write(struct __file_bufio *bf, const void *buf, size_t count)
+{
+#ifndef BUFIO_ABI_MATCHES
+    if (!(bf->bflags & __BFPTR))
+        return (bf->write_int)(_FDEV_BUFIO_FD(bf), buf, count);
+#endif
+    return (bf->write_ptr)((void *) bf->ptr, buf, count);
+}
+
+static inline __off_t bufio_lseek(struct __file_bufio *bf, __off_t offset, int whence)
+{
+#ifndef BUFIO_ABI_MATCHES
+    if (!(bf->bflags & __BFPTR)) {
+        if (bf->lseek_int)
+            return (bf->lseek_int)(_FDEV_BUFIO_FD(bf), offset, whence);
+    } else
+#endif
+    {
+        if (bf->lseek_ptr)
+            return (bf->lseek_ptr)((void *) bf->ptr, offset, whence);
+    }
+    return _FDEV_ERR;
+}
+
+static inline int bufio_close(struct __file_bufio *bf)
+{
+    int ret = 0;
+#ifndef BUFIO_ABI_MATCHES
+    if (!(bf->bflags & __BFPTR)) {
+        if (bf->close_int)
+            ret = (bf->close_int)(_FDEV_BUFIO_FD(bf));
+    } else
+#endif
+    {
+        if (bf->close_ptr)
+            ret = (bf->close_ptr)((void *) bf->ptr);
+    }
+    return ret;
+}
+
+#define FDEV_SETUP_POSIX(fd, buf, size, rwflags, bflags)      \
+        FDEV_SETUP_BUFIO(fd, buf, size,                       \
+                         read, write,                         \
                          lseek, close, rwflags, bflags)
 
 int
-__posix_sflags (const char *mode, int *optr);
+__stdio_flags (const char *mode, int *optr);
 
-static inline int
-__stdio_sflags (const char *mode)
-{
-    int omode;
-    return __posix_sflags (mode, &omode);
+#ifdef __STDIO_LOCKING
+void __flockfile_init(FILE *f);
+#define __LOCK_NONE     ((_LOCK_RECURSIVE_T) (uintptr_t) 1)
+#define __LOCK_INIT_NONE        .lock = __LOCK_NONE
+#else
+#define __LOCK_INIT_NONE
+#endif
+
+#define __funlock_return(f, v) do { __funlockfile(f); return (v); } while(0)
+
+static inline void __flockfile(FILE *f) {
+	(void) f;
+#ifdef __STDIO_LOCKING
+	if (!f->lock)
+            __flockfile_init(f);
+        if (f->lock != __LOCK_NONE)
+            __lock_acquire_recursive(f->lock);
+#endif
 }
 
+static inline void __funlockfile(FILE *f) {
+	(void) f;
+#ifdef __STDIO_LOCKING
+        if (f->lock != __LOCK_NONE)
+            __lock_release_recursive(f->lock);
+#endif
+}
+
+static inline void __flockfile_close(FILE *f) {
+	(void) f;
+#ifdef __STDIO_LOCKING
+        if (f->lock && f->lock != __LOCK_NONE)
+            __lock_close(f->lock);
+#endif
+}
+
+/* Silence santizer errors when adding/subtracting 0 to a NULL pointer */
+#ifdef __clang__
+#define POINTER_MINUS(a,b)     ((__typeof(a)) ((uintptr_t) (a) - (b) * sizeof((*a))))
+#define POINTER_PLUS(a,b)      ((__typeof(a)) ((uintptr_t) (a) + (b) * sizeof((*a))))
 #else
-
-int
-__stdio_sflags (const char *mode);
-
+#define POINTER_MINUS(a,b)     ((a) - (b))
+#define POINTER_PLUS(a,b)      ((a) + (b))
 #endif
 
 int	__d_vfprintf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(printf, 2, 0);
 int	__f_vfprintf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__i_vfprintf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__l_vfprintf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__m_vfprintf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+
 int	__d_sprintf(char *__s, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 2, 0);
 int	__f_sprintf(char *__s, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__i_sprintf(char *__s, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__l_sprintf(char *__s, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+int	__m_sprintf(char *__s, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 2, 0);
+
 int	__d_snprintf(char *__s, size_t __n, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 3, 0);
 int	__f_snprintf(char *__s, size_t __n, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 3, 0);
+int	__i_snprintf(char *__s, size_t __n, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 3, 0);
+int	__l_snprintf(char *__s, size_t __n, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 3, 0);
+int	__m_snprintf(char *__s, size_t __n, const char *__fmt, ...) __FORMAT_ATTRIBUTE__(printf, 3, 0);
+
+int	__d_vfscanf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(scanf, 2, 0);
+int	__f_vfscanf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(scanf, 2, 0);
+int	__i_vfscanf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(scanf, 2, 0);
+int	__l_vfscanf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(scanf, 2, 0);
+int	__m_vfscanf(FILE *__stream, const char *__fmt, va_list __ap) __FORMAT_ATTRIBUTE__(scanf, 2, 0);
 
 #if __SIZEOF_DOUBLE__ == 8
 #define FLOAT64 double
@@ -563,7 +688,7 @@ _u128_gt(_u128 a, _u128 b)
 long double
 __atold_engine(_u128 m10, int e10);
 
-static inline uint16_t
+static inline __ungetc_t
 __non_atomic_exchange_ungetc(__ungetc_t *p, __ungetc_t v)
 {
 	__ungetc_t e = *p;
@@ -580,7 +705,22 @@ __non_atomic_compare_exchange_ungetc(__ungetc_t *p, __ungetc_t d, __ungetc_t v)
 	return true;
 }
 
-#ifdef ATOMIC_UNGETC
+static inline __ungetc_t
+__non_atomic_load_ungetc(const volatile __ungetc_t *p)
+{
+        return *p;
+}
+
+#if defined(__LONG_DOUBLE_128__) && defined(__strong_reference)
+#if defined(__GNUCLIKE_PRAGMA_DIAGNOSTIC) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wmissing-attributes"
+#endif
+#define __ieee128_reference(a,b) __strong_reference(a,b)
+#else
+#define __ieee128_reference(a,b)
+#endif
+
+#ifdef __ATOMIC_UNGETC
 
 #if __PICOLIBC_UNGETC_SIZE == 4 && defined (__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
 #define PICOLIBC_HAVE_SYNC_COMPARE_AND_SWAP
@@ -608,6 +748,12 @@ __atomic_exchange_ungetc(__ungetc_t *p, __ungetc_t v)
 	return atomic_exchange_explicit(pa, v, memory_order_relaxed);
 }
 
+static inline __ungetc_t
+__atomic_load_ungetc(const volatile __ungetc_t *p)
+{
+	_Atomic __ungetc_t *pa = (_Atomic __ungetc_t *) p;
+        return atomic_load(pa);
+}
 #else
 
 bool
@@ -615,6 +761,19 @@ __atomic_compare_exchange_ungetc(__ungetc_t *p, __ungetc_t d, __ungetc_t v);
 
 __ungetc_t
 __atomic_exchange_ungetc(__ungetc_t *p, __ungetc_t v);
+
+__ungetc_t
+__atomic_load_ungetc(const volatile __ungetc_t *p);
+
+__ungetc_t
+__picolibc_non_atomic_load_ungetc(const volatile __ungetc_t *p);
+
+__ungetc_t
+__picolibc_non_atomic_exchange_ungetc(__ungetc_t *p, __ungetc_t v);
+
+bool
+__picolibc_non_atomic_compare_exchange_ungetc(__ungetc_t *p,
+                                              __ungetc_t d, __ungetc_t v);
 
 #endif /* PICOLIBC_HAVE_SYNC_COMPARE_AND_SWAP */
 
@@ -624,7 +783,9 @@ __atomic_exchange_ungetc(__ungetc_t *p, __ungetc_t v);
 
 #define __atomic_exchange_ungetc(p,v) __non_atomic_exchange_ungetc(p,v)
 
-#endif /* ATOMIC_UNGETC */
+#define __atomic_load_ungetc(p) (*(p))
+
+#endif /* __ATOMIC_UNGETC */
 
 /*
  * This operates like _tolower on upper case letters, but also works
